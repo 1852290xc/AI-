@@ -147,7 +147,7 @@ def reason_for(product, matched, cat_pref, viewed_titles):
     return "热门"
 
 
-def rank(products, query, user=None, behaviors=None, limit=12, fill=False):
+def rank(products, query, user=None, behaviors=None, limit=12, fill=False, lat=None, lng=None):
     """语义 60% + 分类偏好 25% + 热度 15%。"""
     idx = Index(products)
     terms, hit_terms = expand(query)
@@ -161,16 +161,24 @@ def rank(products, query, user=None, behaviors=None, limit=12, fill=False):
         cat_pref, viewed = affinity(user.id, behaviors or [], products)
     viewed_titles = [v.title for v in viewed]
 
+    import campus as campus_mod
+
     max_views = max([(p.views or 0) for p in products], default=1) or 1
+    use_loc = lat is not None and lng is not None
     rows = []
     for p, sim, matched in scored:
         pref = cat_pref.get(p.category_id, 0.0)
         heat = (p.views or 0) / max_views
-        total = 0.60 * sim + 0.25 * pref + 0.15 * heat
+        prox, dist = campus_mod.proximity(lat, lng, p.seller.school if p.seller else "")
+        if use_loc:
+            total = 0.50 * sim + 0.20 * pref + 0.12 * heat + 0.18 * prox
+        else:
+            total = 0.60 * sim + 0.25 * pref + 0.15 * heat
         rows.append({
             "product": p,
             "score": round(total, 4),
             "reason": reason_for(p, matched, cat_pref, viewed_titles),
+            "distance": round(dist, 1) if dist is not None else None,
             "matched": matched[:4],
         })
 
@@ -179,10 +187,14 @@ def rank(products, query, user=None, behaviors=None, limit=12, fill=False):
         for p in products:
             pref = cat_pref.get(p.category_id, 0.0)
             heat = (p.views or 0) / max_views
+            prox, dist = campus_mod.proximity(lat, lng, p.seller.school if p.seller else "")
+            score = 0.25 * pref + 0.15 * heat + (0.18 * prox if use_loc else 0)
+            reason = "离你最近" if (use_loc and prox >= 0.5) else reason_for(p, [], cat_pref, viewed_titles)
             rows.append({
                 "product": p,
-                "score": round(0.25 * pref + 0.15 * heat, 4),
-                "reason": reason_for(p, [], cat_pref, viewed_titles),
+                "score": round(score, 4),
+                "reason": reason,
+                "distance": round(dist, 1) if dist is not None else None,
                 "matched": [],
             })
 
@@ -196,10 +208,13 @@ def rank(products, query, user=None, behaviors=None, limit=12, fill=False):
             if pref <= 0:
                 continue
             heat = (p.views or 0) / max_views
+            prox, dist = campus_mod.proximity(lat, lng, p.seller.school if p.seller else "")
             rows.append({
                 "product": p,
-                "score": round(0.25 * pref + 0.15 * heat, 4),
-                "reason": f"你常看{p.category.name}" if p.category else "猜你喜欢",
+                "score": round(0.25 * pref + 0.15 * heat + (0.18 * prox if use_loc else 0), 4),
+                "reason": ("离你最近" if (use_loc and prox >= 0.5)
+                           else (f"你常看{p.category.name}" if p.category else "猜你喜欢")),
+                "distance": round(dist, 1) if dist is not None else None,
                 "matched": [],
             })
 

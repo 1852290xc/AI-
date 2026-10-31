@@ -31,6 +31,8 @@ class User(UserMixin, TimestampMixin, db.Model):
     credit = db.Column(db.Integer, default=100)          # 信用分
     is_admin = db.Column(db.Boolean, default=False)
     banned = db.Column(db.Boolean, default=False)
+    lat = db.Column(db.Float)          # 最近一次授权定位的纬度
+    lng = db.Column(db.Float)          # 最近一次授权定位的经度
 
     products = db.relationship("Product", backref="seller", lazy="dynamic")
 
