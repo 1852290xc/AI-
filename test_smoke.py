@@ -1,0 +1,158 @@
+"""冒烟测试：用 test client 模拟浏览器，覆盖 24 个关键点。
+
+    python test_smoke.py
+"""
+import os
+import sys
+
+from app import create_app
+from config import Config
+from models import Category, Order, Product, User, db
+from init_db import seed_data
+
+TEST_DB = os.path.join(Config.__dict__.get("BASE_DIR", os.path.dirname(__file__)), "data", "test_smoke.db")
+
+RESULTS = []
+
+
+def check(name, cond, detail=""):
+    RESULTS.append((name, bool(cond), detail))
+    mark = "✅" if cond else "❌"
+    print(f"{mark} {name}" + (f"　— {detail}" if detail and not cond else ""))
+
+
+class TestConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(os.path.dirname(__file__), "data", "test_smoke.db")
+    WTF_CSRF_ENABLED = False
+
+
+def main():
+    app = create_app(TestConfig)
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        seed_data()
+
+        client = app.test_client()
+
+        # ---------------- 游客 ----------------
+        r = client.get("/")
+        check("1. 游客能访问首页", r.status_code == 200 and "智汇校园" in r.get_data(as_text=True))
+
+        cat = Category.query.first()
+        r = client.get(f"/?cat={cat.id}")
+        check("2. 分类筛选可用", r.status_code == 200 and cat.name in r.get_data(as_text=True))
+
+        r = client.get("/?q=iPhone")
+        check("3. 关键词搜索可用", r.status_code == 200 and "iPhone" in r.get_data(as_text=True))
+        r = client.get("/about")
+        check("4. 关于页可访问", r.status_code == 200)
+
+        # ---------------- 注册 / 登录 ----------------
+        r = client.post("/auth/register", data={
+            "student_id": "2099001", "nickname": "测试同学", "school": "示范大学",
+            "email": "test1@campus.edu", "password": "abc123", "confirm": "abc123",
+        }, follow_redirects=True)
+        check("5. 注册成功并自动登录", r.status_code == 200 and User.query.filter_by(student_id="2099001").first() is not None)
+
+        client.get("/auth/logout")
+        r = client.post("/auth/register", data={
+            "student_id": "2099001", "nickname": "重复", "school": "示范大学",
+            "email": "test1@campus.edu", "password": "abc123", "confirm": "abc123",
+        }, follow_redirects=True)
+        check("6. 重复注册被拒绝", "已经注册" in r.get_data(as_text=True))
+
+        client.get("/auth/logout")
+        r = client.post("/auth/login", data={"account": "2099001", "password": "abc123"}, follow_redirects=True)
+        check("7. 登录成功", r.status_code == 200 and "测试同学" in r.get_data(as_text=True))
+
+        client.get("/auth/logout")
+        r = client.post("/auth/login", data={"account": "2099001", "password": "wrong"}, follow_redirects=True)
+        check("8. 错误密码被拒绝", "不正确" in r.get_data(as_text=True))
+
+        # ---------------- AI 接口 ----------------
+        r = client.post("/ai/classify", json={"title": "九成新 iPhone 13", "description": ""})
+        check("9. AI 分类接口判断为数码电子", r.json["category"] == "数码电子", str(r.json))
+
+        r = client.post("/ai/price", json={"original_price": 5999, "condition": "九成新"})
+        check("10. AI 定价返回合理区间", r.json["low"] < r.json["suggest"] < r.json["high"])
+
+        r = client.post("/ai/chat", json={"question": "怎么发布商品？"})
+        check("11. AI 客服能回答常见问题", r.json["matched"] and len(r.json["answer"]) > 5)
+
+        r = client.post("/ai/moderate", json={"text": "低价出外挂，需要的私聊"})
+        check("12. AI 审核能拦截违规内容", r.json["passed"] is False)
+
+        # ---------------- 发布商品 ----------------
+        client.post("/auth/login", data={"account": "zhangsan", "password": "123456"})
+        before = Product.query.count()
+        r = client.post("/product/publish", data={
+            "title": "九成新 iPad mini 6 64G", "description": "自用半年，无划痕",
+            "price": "1999", "original_price": "3799", "condition": "九成新", "category_id": "",
+        }, follow_redirects=True)
+        new = Product.query.filter_by(title="九成新 iPad mini 6 64G").first()
+        check("13. 发布商品成功且 AI 自动分类", r.status_code == 200 and new is not None and new.category.name == "数码电子")
+
+        r = client.post("/product/publish", data={
+            "title": "代写论文服务", "description": "包过，价格好商量",
+            "price": "500", "original_price": "1000", "condition": "全新", "category_id": "",
+        }, follow_redirects=True)
+        check("14. 违规商品被拦截", Product.query.count() == before + 1 and "拦截" in r.get_data(as_text=True))
+
+        # ---------------- 收藏 ----------------
+        pid = new.id
+        r = client.post(f"/product/{pid}/favorite")
+        check("15. 收藏成功", r.json["ok"] and r.json["favorited"] is True)
+        r = client.post(f"/product/{pid}/favorite")
+        check("16. 取消收藏成功", r.json["ok"] and r.json["favorited"] is False)
+
+        # ---------------- 下单 ----------------
+        other = Product.query.filter(Product.seller_id != User.query.filter_by(student_id="zhangsan").first().id).first()
+        r = client.post(f"/order/create/{other.id}", follow_redirects=True)
+        order = Order.query.filter_by(product_id=other.id).first()
+        check("17. 下单成功且商品转为已售",
+              r.status_code == 200 and order is not None and db.session.get(Product, other.id).status == "sold")
+
+        mine = Product.query.filter_by(seller_id=User.query.filter_by(student_id="zhangsan").first().id).first()
+        r = client.post(f"/order/create/{mine.id}", follow_redirects=True)
+        check("18. 不能购买自己的商品", "不能购买自己" in r.get_data(as_text=True))
+
+        r = client.post(f"/order/create/{other.id}", follow_redirects=True)
+        check("19. 重复下单被拦截", "已经下过单" in r.get_data(as_text=True) or "不能购买" in r.get_data(as_text=True))
+
+        # ---------------- 私信 ----------------
+        lisi = User.query.filter_by(student_id="lisi").first()
+        r = client.post("/message/send", json={"to": lisi.id, "content": "同学，这个还在吗？"})
+        check("20. 私信发送成功", r.json["ok"] is True)
+
+        r = client.post("/message/send", json={"to": lisi.id, "content": "你这傻逼东西"})
+        check("21. 私信违规内容被拦截", r.json["ok"] is False and r.json.get("blocked"))
+
+        # ---------------- 后台权限 ----------------
+        r = client.get("/admin/", follow_redirects=False)
+        check("22. 普通用户访问后台被拒绝", r.status_code == 403)
+
+        client.get("/auth/logout")
+        client.post("/auth/login", data={"account": "admin", "password": "admin123"})
+        r = client.get("/admin/")
+        check("23. 管理员可进后台", r.status_code == 200 and "管理看板" in r.get_data(as_text=True))
+
+        r = client.get("/auth/logout", follow_redirects=True)
+        check("24. 退出登录正常", "已退出登录" in r.get_data(as_text=True))
+
+    passed = sum(1 for _, ok, _ in RESULTS if ok)
+    total = len(RESULTS)
+    print()
+    if passed == total:
+        print(f"✅ 全部通过！{passed}/{total}")
+        return 0
+    print(f"❌ 通过 {passed}/{total}，失败项：")
+    for name, ok, detail in RESULTS:
+        if not ok:
+            print(f"   - {name} {detail}")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
