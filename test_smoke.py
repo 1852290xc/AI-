@@ -316,14 +316,28 @@ def main():
         check("53. 首页显示可收放分类树",
               "taxo-panel" in body and "女装" in body and "工业品" in body and "toggleTaxo" in body)
 
-        r = client.get("/?g=digital")
-        n_digital = r.get_data(as_text=True).count('class="card"')
-        r0 = client.get("/")
-        n_all = r0.get_data(as_text=True).count('class="card"')
-        check("54. 大类筛选生效", r.status_code == 200 and 0 < n_digital < n_all)
+        _seller = User.query.first()
+        _cat = Category.query.first()
+        _fresh = _P(title="八成新 贝亲 奶瓶 240ml", description="测试用母婴商品，成色良好。",
+                    price=99, original_price=129, condition="八成新",
+                    category_id=_cat.id, seller_id=_seller.id,
+                    status="onsale", taxo_sub="母婴", views=1)
+        db.session.add(_fresh)
+        _digital = _P.query.filter(_P.taxo_sub.is_(None)).first()
+        if _digital:
+            _digital.taxo_sub = "手机"
+        db.session.commit()
 
+        client.get("/auth/logout")
+        d_body = client.get("/?g=digital").get_data(as_text=True)
+        b_body = client.get("/?g=baby&sub=母婴").get_data(as_text=True)
+        import re as _re2
+        b_titles = _re2.findall(r'class="card-title"[^>]*>\s*([^<]+)', b_body)
+        check("54. 大类/子类筛选生效",
+              "数码 · 在售" in d_body and "母婴 · 在售" in b_body
+              and any("贝亲" in t for t in b_titles))
         r = client.get("/?g=digital&sub=手机")
-        check("55. 子类跳到关键词搜索", r.status_code == 200 and ("搜索" in r.get_data(as_text=True)))
+        check("55. 子类筛选出行商品", r.status_code == 200 and "在售" in r.get_data(as_text=True))
 
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)

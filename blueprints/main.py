@@ -68,8 +68,7 @@ def index():
     keyword = (request.args.get("q") or "").strip()
     group_key = (request.args.get("g") or "").strip()
     sub_name = (request.args.get("sub") or "").strip()
-    if group_key and sub_name and not keyword:
-        keyword = taxonomy.sub_keyword(group_key, sub_name)
+    # 子类筛选走 taxo_sub，大类筛选走子类集合
     per_page = Config.PER_PAGE
 
     if keyword and current_user.is_authenticated:
@@ -79,10 +78,12 @@ def index():
     if cat_id:
         on_sale = on_sale.filter_by(category_id=cat_id)
     pool = on_sale.all()
-    if group_key:
-        _cats = taxonomy.group_categories(group_key)
-        if _cats:
-            pool = [x for x in pool if x.category and x.category.name in _cats]
+    if sub_name:
+        pool = [x for x in pool if (x.taxo_sub or "") == sub_name]
+    elif group_key:
+        _subs = [x[0] for x in (taxonomy.BY_KEY.get(group_key) or {}).get("subs", [])]
+        if _subs:
+            pool = [x for x in pool if (x.taxo_sub or "") in _subs]
 
     lat, lng = _location()
     mode, intent, hit_terms = "本地推荐", "", []
@@ -141,6 +142,12 @@ def index():
         }
         rows = rows[start:start + per_page]
         title = f"分类 · {cat.name if cat else ''}"
+    elif not keyword and (group_key or sub_name):
+        rows, _ = search_engine.rank(pool, "", current_user if current_user.is_authenticated else None,
+                                     _behaviors(), limit=per_page, lat=lat, lng=lng, fill=False)
+        rows = [dict(r, reason=r.get("reason") or "分类命中") for r in rows]
+        title = (sub_name or (taxonomy.BY_KEY.get(group_key) or {}).get("name") or "分类") + " · 在售"
+        mode = "分类浏览"
     else:
         behaviors = _behaviors()
         if current_user.is_authenticated:
@@ -287,6 +294,7 @@ def api_products():
             "v": p.views or 0,
             "img": ("/static/uploads/" + p.image) if p.image else "",
             "cmp": p.campus or (p.seller.school if p.seller else ""),
+            "sub": p.taxo_sub or "",
         })
     return jsonify({"ok": True, "count": len(items), "items": items})
 

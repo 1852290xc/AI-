@@ -73,6 +73,7 @@ class Product(TimestampMixin, db.Model):
     image = db.Column(db.String(255), default="")
     ai_tags = db.Column(db.String(255), default="")       # 逗号分隔
     campus = db.Column(db.String(64))                     # 交易校区（默认取卖家学校）
+    taxo_sub = db.Column(db.String(32))                   # 分类树子类（女装/手机/图书…）
     status = db.Column(db.String(16), default="onsale")   # onsale / sold / off / pending
     views = db.Column(db.Integer, default=0)
 
