@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ site_name }} · {{ slogan }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <span class="pill">本地 AI · 断网可用</span>
+    <h1>{{ slogan }}</h1>
+    <p class="hero-sub">发布时会自动帮你分类、写文案、给定价建议，还会拦下违规内容。</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{ url_for('product.publish') }}">免费发布一件闲置</a>
+      <a class="btn btn-ghost" href="{{ url_for('ai.assistant') }}">问问 AI 助手</a>
+    </div>
+  </div>
+  <div class="hero-panel">
+    <div class="hero-stat"><strong>{{ products|length }}</strong><span>当前在售</span></div>
+    <div class="hero-stat"><strong>7</strong><span>AI 能力</span></div>
+    <div class="hero-stat"><strong>0</strong><span>外部 API 依赖</span></div>
+  </div>
+</section>
+
+<section class="toolbar">
+  <div class="cats">
+    <a class="cat {{ 'active' if not active_cat and not keyword }}" href="{{ url_for('main.index') }}">全部</a>
+    {% for c in categories %}
+      <a class="cat {{ 'active' if active_cat == c.id }}"
+         href="{{ url_for('main.index', cat=c.id) }}">{{ c.icon }} {{ c.name }}</a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="section-head">
+  <h2>{{ title }}</h2>
+  {% if keyword %}<span class="muted">共 {{ products|length }} 件相关闲置</span>{% endif %}
+</div>
+
+{% if products %}
+  <div class="grid">
+    {% for p in products %}
+      {% include "_card.html" %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <p class="empty-title">这里还空着</p>
+    <p class="muted">换个分类看看，或者成为第一个发布的人。</p>
+    <a class="btn btn-primary" href="{{ url_for('product.publish') }}">去发布</a>
+  </div>
+{% endif %}
+
+{% if pages and pages.pages > 1 %}
+  <nav class="pager">
+    {% if pages.has_prev %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('main.index', page=pages.prev_num, cat=active_cat, q=keyword) }}">上一页</a>
+    {% endif %}
+    <span class="muted">第 {{ pages.page }} / {{ pages.pages }} 页</span>
+    {% if pages.has_next %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('main.index', page=pages.next_num, cat=active_cat, q=keyword) }}">下一页</a>
+    {% endif %}
+  </nav>
+{% endif %}
+
+{% if hot %}
+<section class="hot">
+  <h3>本周热度榜</h3>
+  <ol>
+    {% for p in hot %}
+      <li>
+        <a href="{{ url_for('product.detail', pid=p.id) }}">{{ p.title }}</a>
+        <span class="muted">¥{{ '%.0f'|format(p.price) }} · {{ p.views }} 次浏览</span>
+      </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+{% endblock %}

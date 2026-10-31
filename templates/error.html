@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="error-page">
+  <div class="error-code">{{ code }}</div>
+  <h1>{{ message }}</h1>
+  <p class="muted">可能是链接过期了，或者这件闲置已经不在了。</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="{{ url_for('main.index') }}">回到首页</a>
+    <a class="btn btn-ghost" href="{{ url_for('ai.assistant') }}">问问 AI 助手</a>
+  </div>
+</section>
+{% endblock %}

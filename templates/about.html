@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}关于 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <h1>关于 {{ site_name }}</h1>
+  <p class="lead">校园里的闲置，大多还能用，只是找不对人。我们把「发布」这一步的麻烦交给 AI，让转手变得像发一条动态。</p>
+
+  <div class="cols">
+    <div>
+      <h3>7 项本地 AI 能力</h3>
+      <ul class="list">
+        <li><b>智能分类</b>：关键词打分，自动归入 6 个品类并给出置信度</li>
+        <li><b>智能定价</b>：按成色折价，给出低/中/高三档区间</li>
+        <li><b>文案生成</b>：按品类套模板，一键生成描述</li>
+        <li><b>内容审核</b>：违规词库命中即拦截，说明原因</li>
+        <li><b>标签提取</b>：成色、型号、品类自动成标签</li>
+        <li><b>个性化推荐</b>：内容 50% + 偏好 35% + 热度 15%</li>
+        <li><b>智能客服</b>：常见问题即时答，答不了转人工</li>
+      </ul>
+    </div>
+    <div>
+      <h3>技术栈</h3>
+      <ul class="list">
+        <li>Flask 3 + Flask-Login + Flask-SQLAlchemy</li>
+        <li>SQLite 单文件数据库，零安装</li>
+        <li>原生 CSS/JS，Bootstrap 本地化，断网可用</li>
+        <li>AI 全部为纯 Python 规则引擎，无外部 API</li>
+      </ul>
+      <h3>参赛说明</h3>
+      <p class="muted">本项目为传智杯 AI 创新应用大赛参赛作品，代码开源（MIT），演示视频与 Prompt 记录随作品提交。</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
