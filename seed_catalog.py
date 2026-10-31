@@ -154,17 +154,23 @@ def main():
         existing = {(p.title or "") for p in Product.query.all()}
         added = 0
 
+        variant_idx = {}
         for g in GROUPS:
             for sub_name, cat_names, _ in g["subs"]:
                 inner = [c.strip() for c in cat_names.split()] if isinstance(cat_names, str) else list(cat_names)
                 cat = cats.get(inner[0] if inner else "其他") or cats["其他"]
                 extra = EXTRA.get(cat.name, "")
                 for name, market in ITEMS.get(sub_name, []):
+                    _imgs = sorted(f for f in files if f.startswith("p4_" + __import__("re").sub(r"[^\w]", "", name)[:16] + "_"))
                     for cond in sub_conditions(sub_name, name):
                         title = f"{cond} {name}"
                         if title in existing:
                             continue
                         price = max(1, int(round(market * COND_FACTOR[cond])))
+                        # 同一商品的不同成色，尽量配不同的图
+                        k = variant_idx.get(name, 0)
+                        variant_idx[name] = k + 1
+                        img = _imgs[k % len(_imgs)] if _imgs else pick_image(sub_name, name, files)
                         db.session.add(Product(
                             title=title,
                             description=DESC_TMPL[cond].format(name=name, extra=extra),
@@ -174,7 +180,7 @@ def main():
                             category_id=cat.id,
                             seller_id=rng.choice(sellers).id,
                             campus=rng.choice(camps),
-                            image=pick_image(sub_name, name, files),
+                            image=img,
                             status="onsale",
                             views=rng.randint(20, 600),
                             taxo_sub=sub_name,
