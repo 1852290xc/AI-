@@ -5,7 +5,7 @@ import ai_engine
 import llm
 import search_engine
 from config import Config
-from models import Behavior, Category, Product
+from models import Behavior, Category, Product, SearchHistory, db
 
 bp = Blueprint("main", __name__)
 
@@ -23,6 +23,9 @@ def index():
     cat_id = request.args.get("cat", type=int)
     keyword = (request.args.get("q") or "").strip()
     per_page = Config.PER_PAGE
+
+    if keyword and current_user.is_authenticated:
+        _remember_search(keyword)
 
     on_sale = Product.query.filter_by(status="onsale")
     if cat_id:
@@ -106,7 +109,41 @@ def index():
         mode=mode, intent=intent, hit_terms=hit_terms,
         llm_status=llm.status(),
         on_sale_count=Product.query.filter_by(status="onsale").count(),
+        recent_searches=_recent_searches(),
     )
+
+
+def _remember_search(keyword):
+    """同一关键词只留一条：重复搜索累加次数并置顶。"""
+    row = SearchHistory.query.filter_by(user_id=current_user.id, keyword=keyword).first()
+    if row:
+        row.times = (row.times or 1) + 1
+        row.updated_at = db.func.now()
+    else:
+        db.session.add(SearchHistory(user_id=current_user.id, keyword=keyword))
+    db.session.commit()
+    # 只保留最近 20 条
+    extra = (SearchHistory.query.filter_by(user_id=current_user.id)
+             .order_by(SearchHistory.updated_at.desc()).offset(20).all())
+    for e in extra:
+        db.session.delete(e)
+    db.session.commit()
+
+
+def _recent_searches(limit=8):
+    if not current_user.is_authenticated:
+        return []
+    return (SearchHistory.query.filter_by(user_id=current_user.id)
+            .order_by(SearchHistory.updated_at.desc()).limit(limit).all())
+
+
+@bp.route("/search-history/clear", methods=["POST"])
+def clear_search_history():
+    from flask import redirect, url_for
+    if current_user.is_authenticated:
+        SearchHistory.query.filter_by(user_id=current_user.id).delete()
+        db.session.commit()
+    return redirect(url_for("main.index"))
 
 
 @bp.route("/about")

@@ -32,6 +32,18 @@
   </div>
 </section>
 
+{% if recent_searches %}
+<section class="recent-searches">
+  <span class="muted small">最近搜索</span>
+  {% for s in recent_searches %}
+    <a class="chip" href="{{ url_for('main.index', q=s.keyword) }}">{{ s.keyword }}</a>
+  {% endfor %}
+  <form method="post" action="{{ url_for('main.clear_search_history') }}" class="inline">
+    <button class="btn btn-ghost btn-sm" type="submit">清除</button>
+  </form>
+</section>
+{% endif %}
+
 <div class="section-head">
   <h2>{{ title }}</h2>
   <span class="mode-badge">{{ mode }}</span>
