@@ -1,8 +1,12 @@
+import os
+
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 
 import ai_engine
+import image_ai
 import listing_ai
+from config import Config
 from models import Category, Product
 
 bp = Blueprint("ai", __name__)
@@ -40,6 +44,56 @@ def analyze():
     )
     result["ok"] = True
     result["comparable_count"] = len(comparables)
+    return jsonify(result)
+
+
+@bp.route("/image-check", methods=["POST"])
+def image_check():
+    """查重 + AI 痕迹 + 与参考图比对。"""
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"ok": False, "message": "没有收到图片"}), 400
+    try:
+        img = image_ai.load_image(f.stream)
+    except Exception:
+        return jsonify({"ok": False, "message": "图片无法解析，换一张试试"}), 400
+
+    meta = image_ai.read_meta(img)
+    score, reasons = image_ai.ai_traces(img, meta)
+
+    # 与站内图片查重（最多取 300 张，够用且够快）
+    paths = []
+    for p in Product.query.order_by(Product.id.desc()).limit(300).all():
+        if p.image:
+            paths.append((p.image, os.path.join(Config.UPLOAD_FOLDER, p.image)))
+    dups = image_ai.find_duplicates(img, [(n, pa) for n, pa in paths if os.path.exists(pa)])
+    dup_payload = []
+    for name, sim, same in dups:
+        owner = Product.query.filter_by(image=name).first()
+        dup_payload.append({
+            "image": name,
+            "sim": sim,
+            "same": same,
+            "product_id": owner.id if owner else None,
+            "title": owner.title if owner else "",
+        })
+
+    result = {
+        "ok": True,
+        "size": list(img.size),
+        "ai": {"score": score, "verdict": image_ai.verdict_of(score), "reasons": reasons},
+        "duplicates": dup_payload,
+        "is_duplicate": bool(dup_payload and dup_payload[0]["same"]),
+    }
+
+    ref = request.files.get("reference")
+    if ref:
+        try:
+            ref_img = image_ai.load_image(ref.stream)
+            result["compare"] = image_ai.compare(img, ref_img)
+        except Exception:
+            result["compare"] = None
+
     return jsonify(result)
 
 
