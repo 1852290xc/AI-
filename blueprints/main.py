@@ -251,6 +251,49 @@ def about():
     return render_template("about.html")
 
 
+@bp.route("/api/products")
+def api_products():
+    """给单文件前端用的商品列表（JSON）。"""
+    from flask import request
+
+    q = (request.args.get("q") or "").strip()
+    cat = request.args.get("cat") or ""
+    rows = Product.query.filter_by(status="onsale").order_by(Product.created_at.desc()).all()
+    items = []
+    for p in rows:
+        cname = p.category.name if p.category else "其他"
+        if cat and cat != "全部" and cname != cat:
+            continue
+        if q and q.lower() not in (p.title or "").lower() and q not in cname:
+            continue
+        items.append({
+            "id": p.id,
+            "t": p.title,
+            "p": int(p.price or 0),
+            "o": int(p.original_price or 0),
+            "c": p.condition or "",
+            "cat": cname,
+            "s": p.seller.school if p.seller else "",
+            "v": p.views or 0,
+            "img": ("/static/uploads/" + p.image) if p.image else "",
+            "cmp": p.campus or (p.seller.school if p.seller else ""),
+        })
+    return jsonify({"ok": True, "count": len(items), "items": items})
+
+
+@bp.route("/web")
+def web_app():
+    """单文件交互版页面（由 tools/make_spa.py 生成到 static/app.html）。"""
+    import os
+
+    from flask import current_app, send_from_directory
+
+    path = os.path.join(current_app.static_folder, "app.html")
+    if not os.path.exists(path):
+        return ("静态前端未生成，请先运行 tools/make_spa.py", 404)
+    return send_from_directory(current_app.static_folder, "app.html")
+
+
 @bp.route("/api/health")
 def health():
     return jsonify({"status": "ok", "service": "campus-secondhand", "version": "1.1.0",
