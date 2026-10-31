@@ -32,6 +32,12 @@
   </div>
 </section>
 
+{% if located %}
+<div class="loc-bar">📍 已按「{{ loc_campus }}」附近的商品优先排序{% if loc_km %}（距你 {{ loc_km }} km）{% endif %}
+  <button class="btn btn-ghost btn-sm" id="locClear">关闭定位</button>
+</div>
+{% endif %}
+
 {% if recent_searches %}
 <section class="recent-searches">
   <span class="muted small">最近搜索</span>
@@ -58,7 +64,7 @@
   <div class="grid">
     {% for r in rows %}
       {% set p = r.product %}
-      {% set reason = r.reason %}
+      {% set _d = r.get('distance') %}{% set reason = r.reason ~ (' · 距你 ' ~ _d ~ ' km' if _d else '') %}
       {% include "_card.html" %}
     {% endfor %}
   </div>
@@ -91,7 +97,7 @@
     <div class="grid">
       {% for r in likes %}
         {% set p = r.product %}
-        {% set reason = r.reason %}
+        {% set _d = r.get('distance') %}{% set reason = r.reason ~ (' · 距你 ' ~ _d ~ ' km' if _d else '') %}
         {% include "_card.html" %}
       {% endfor %}
     </div>

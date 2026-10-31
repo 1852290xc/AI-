@@ -21,6 +21,9 @@
     </form>
 
     <nav class="nav-links">
+      <button class="btn btn-ghost btn-sm" id="locBtn" data-on="{{ '1' if located else '0' }}">
+        {% if located %}📍 {{ loc_campus }}{% if loc_km %} · {{ loc_km }} km{% endif %}{% else %}📍 开启定位{% endif %}
+      </button>
       <a href="{{ url_for('ai.assistant') }}">AI 助手</a>
       {% if current_user.is_authenticated %}
         <a href="{{ url_for('product.publish') }}" class="nav-cta">发布闲置</a>

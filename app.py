@@ -49,7 +49,20 @@ def create_app(config_class=Config):
                 cart_count = CartItem.query.filter_by(user_id=current_user.id).count()
         except Exception:
             cart_count = 0
+        loc_campus, loc_km = "", None
+        try:
+            import campus as campus_mod
+            from flask import session
+            lat, lng = session.get("lat"), session.get("lng")
+            if lat is not None and lng is not None:
+                loc_campus, km = campus_mod.nearest_campus(float(lat), float(lng))
+                loc_km = round(km, 1) if km is not None else None
+        except Exception:
+            pass
         return {
+            "loc_campus": loc_campus,
+            "loc_km": loc_km,
+            "located": bool(loc_campus),
             "cart_count": cart_count,
             "site_name": app.config["SITE_NAME"],
             "slogan": app.config["SITE_SLOGAN"],

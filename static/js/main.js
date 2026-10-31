@@ -151,6 +151,46 @@
     }
   }
 
+
+  /* ---------------------------------------------------------- 定位 */
+  const locBtn = document.getElementById("locBtn");
+  if (locBtn) {
+    locBtn.addEventListener("click", () => {
+      if (locBtn.dataset.on === "1") { return; }
+      if (!navigator.geolocation) {
+        alert("当前浏览器不支持定位，可以直接浏览全部商品");
+        return;
+      }
+      locBtn.textContent = "定位中…";
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const r = await postJSON("/api/location", {
+              lat: pos.coords.latitude, lng: pos.coords.longitude,
+            });
+            if (r.ok) { location.reload(); }
+            else { locBtn.textContent = "📍 开启定位"; alert(r.message || "定位失败"); }
+          } catch (e) { locBtn.textContent = "📍 开启定位"; }
+        },
+        () => {
+          locBtn.textContent = "📍 开启定位";
+          alert("没有拿到定位权限。商品照常浏览，只是不按距离排序。");
+        },
+        { timeout: 8000, maximumAge: 600000 },
+      );
+    });
+  }
+
+  const locClear = document.getElementById("locClear");
+  if (locClear) {
+    locClear.addEventListener("click", async () => {
+      try {
+        await fetch("/api/location", { method: "DELETE" });
+      } catch (e) {}
+      location.reload();
+    });
+  }
+
   /* ---------------------------------------------------------- 购物车 */
   const cartBtn = $("#cartBtn");
   if (cartBtn) {

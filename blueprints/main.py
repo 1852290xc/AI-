@@ -1,13 +1,55 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, session
 from flask_login import current_user
 
 import ai_engine
+import campus
 import llm
 import search_engine
 from config import Config
 from models import Behavior, Category, Product, SearchHistory, db
 
 bp = Blueprint("main", __name__)
+
+
+def _location():
+    """优先用会话里的定位，其次用账号里保存的。"""
+    lat = session.get("lat")
+    lng = session.get("lng")
+    if lat is None and current_user.is_authenticated:
+        lat, lng = current_user.lat, current_user.lng
+    if lat is None or lng is None:
+        return None, None
+    return float(lat), float(lng)
+
+
+@bp.route("/api/location", methods=["POST"])
+def set_location():
+    d = request.get_json(silent=True) or request.form
+    try:
+        lat = float(d.get("lat"))
+        lng = float(d.get("lng"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "message": "坐标无效"}), 400
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"ok": False, "message": "坐标超出范围"}), 400
+
+    session["lat"], session["lng"] = lat, lng
+    if current_user.is_authenticated:
+        current_user.lat, current_user.lng = lat, lng
+        db.session.commit()
+
+    name, km = campus.nearest_campus(lat, lng)
+    return jsonify({"ok": True, "campus": name, "km": round(km, 1) if km else None})
+
+
+@bp.route("/api/location", methods=["DELETE"])
+def clear_location():
+    session.pop("lat", None)
+    session.pop("lng", None)
+    if current_user.is_authenticated:
+        current_user.lat = current_user.lng = None
+        db.session.commit()
+    return jsonify({"ok": True})
 
 
 def _behaviors():
@@ -32,6 +74,7 @@ def index():
         on_sale = on_sale.filter_by(category_id=cat_id)
     pool = on_sale.all()
 
+    lat, lng = _location()
     mode, intent, hit_terms = "本地推荐", "", []
     rows, pages, likes = [], None, []
 
@@ -39,7 +82,7 @@ def index():
         behaviors = _behaviors()
 
         # 1) 本地语义检索：TF-IDF + 同义词 + 个性化加权
-        rows, hit_terms = search_engine.rank(pool, keyword, current_user, behaviors, limit=48)
+        rows, hit_terms = search_engine.rank(pool, keyword, current_user, behaviors, limit=48, lat=lat, lng=lng)
         mode = "本地语义检索"
 
         # 2) 配了大模型就先做查询理解，再做重排（失败自动忽略）
@@ -48,7 +91,7 @@ def index():
             intent = expanded.get("intent", "")
             kws = expanded.get("keywords") or []
             if kws:
-                rows2, _ = search_engine.rank(pool, " ".join(kws), current_user, behaviors, limit=48)
+                rows2, _ = search_engine.rank(pool, " ".join(kws), current_user, behaviors, limit=48, lat=lat, lng=lng)
                 seen = {r["product"].id for r in rows2}
                 rows = rows2 + [r for r in rows if r["product"].id not in seen]
             mode = "AI 增强检索"
@@ -58,7 +101,7 @@ def index():
             rows = reranked
 
         # 3) 搜索页底部“猜你喜欢”
-        likes, _ = search_engine.rank(pool, "", current_user, behaviors, limit=8, fill=True)
+        likes, _ = search_engine.rank(pool, "", current_user, behaviors, limit=8, fill=True, lat=lat, lng=lng)
         shown = {r["product"].id for r in rows}
         likes = [r for r in likes if r["product"].id not in shown][:4]
 
@@ -91,9 +134,16 @@ def index():
     else:
         behaviors = _behaviors()
         if current_user.is_authenticated:
-            rows, _ = search_engine.rank(pool, "", current_user, behaviors, limit=per_page, fill=True)
+            rows, _ = search_engine.rank(pool, "", current_user, behaviors, limit=per_page, fill=True, lat=lat, lng=lng)
             title = "为你推荐"
             mode = "个性化推荐"
+        elif lat is not None and lng is not None:
+            rows, _ = search_engine.rank(pool, "", None, [], limit=per_page, lat=lat, lng=lng)
+            title = "附近商品"
+            mode = "按距离优先"
+            for r in rows:
+                if r.get("distance") is not None:
+                    r["reason"] = "离你最近"
         else:
             items = ai_engine.recommend_products(current_user, limit=per_page)
             rows = [{"product": p, "reason": "热门", "score": 0, "matched": []} for p in items]
@@ -110,6 +160,7 @@ def index():
         llm_status=llm.status(),
         on_sale_count=Product.query.filter_by(status="onsale").count(),
         recent_searches=_recent_searches(),
+        located=lat is not None,
     )
 
 
