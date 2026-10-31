@@ -41,7 +41,16 @@ def create_app(config_class=Config):
             cats = Category.query.order_by(Category.sort).all()
         except Exception:  # 数据库还没初始化时也不该把页面拖垮
             cats = []
+        cart_count = 0
+        try:
+            from flask_login import current_user
+            from models import CartItem
+            if current_user.is_authenticated:
+                cart_count = CartItem.query.filter_by(user_id=current_user.id).count()
+        except Exception:
+            cart_count = 0
         return {
+            "cart_count": cart_count,
             "site_name": app.config["SITE_NAME"],
             "slogan": app.config["SITE_SLOGAN"],
             "categories": cats,

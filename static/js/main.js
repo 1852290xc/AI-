@@ -151,6 +151,26 @@
     }
   }
 
+  /* ---------------------------------------------------------- 购物车 */
+  const cartBtn = $("#cartBtn");
+  if (cartBtn) {
+    cartBtn.addEventListener("click", async () => {
+      cartBtn.disabled = true;
+      try {
+        const r = await postJSON(`/cart/add/${cartBtn.dataset.pid}`);
+        cartBtn.textContent = r.ok ? "已加入购物车 ✓" : r.message;
+        if (r.ok) {
+          const badge = document.querySelector(".nav-badge");
+          if (badge) badge.textContent = r.count;
+        }
+        setTimeout(() => { cartBtn.textContent = "加入购物车"; cartBtn.disabled = false; }, 1600);
+      } catch (e) {
+        cartBtn.textContent = "请先登录";
+        setTimeout(() => { cartBtn.textContent = "加入购物车"; cartBtn.disabled = false; }, 1600);
+      }
+    });
+  }
+
   /* ---------------------------------------------------------- 收藏 */
   const favBtn = $("#favBtn");
   if (favBtn) {
