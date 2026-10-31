@@ -141,3 +141,27 @@ class Behavior(TimestampMixin, db.Model):
     action = db.Column(db.String(16), default="view")      # view / fav / order
 
     product = db.relationship("Product")
+
+class CartItem(TimestampMixin, db.Model):
+    """购物车：一人一件商品只能加一次。"""
+
+    __tablename__ = "cart_items"
+    __table_args__ = (db.UniqueConstraint("user_id", "product_id", name="uq_cart_user_product"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+
+    product = db.relationship("Product")
+
+
+class SearchHistory(TimestampMixin, db.Model):
+    """搜索记录：同一关键词只留一条，重复搜索累加次数并置顶。"""
+
+    __tablename__ = "search_history"
+    __table_args__ = (db.UniqueConstraint("user_id", "keyword", name="uq_user_keyword"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    keyword = db.Column(db.String(64), nullable=False)
+    times = db.Column(db.Integer, default=1)

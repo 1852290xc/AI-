@@ -2,7 +2,7 @@
 
 
 def register_blueprints(app):
-    from blueprints import admin, ai, auth, main, message, order, product
+    from blueprints import admin, ai, auth, cart, history, main, message, order, product
 
     app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp, url_prefix="/auth")
@@ -11,3 +11,5 @@ def register_blueprints(app):
     app.register_blueprint(message.bp, url_prefix="/message")
     app.register_blueprint(ai.bp, url_prefix="/ai")
     app.register_blueprint(admin.bp, url_prefix="/admin")
+    app.register_blueprint(cart.bp, url_prefix="/cart")
+    app.register_blueprint(history.bp, url_prefix="/history")
