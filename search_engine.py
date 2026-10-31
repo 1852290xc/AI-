@@ -169,7 +169,7 @@ def rank(products, query, user=None, behaviors=None, limit=12, fill=False, lat=N
     for p, sim, matched in scored:
         pref = cat_pref.get(p.category_id, 0.0)
         heat = (p.views or 0) / max_views
-        prox, dist = campus_mod.proximity(lat, lng, p.seller.school if p.seller else "")
+        prox, dist = campus_mod.proximity(lat, lng, p.campus or (p.seller.school if p.seller else ""))
         if use_loc:
             total = 0.50 * sim + 0.20 * pref + 0.12 * heat + 0.18 * prox
         else:
@@ -187,7 +187,7 @@ def rank(products, query, user=None, behaviors=None, limit=12, fill=False, lat=N
         for p in products:
             pref = cat_pref.get(p.category_id, 0.0)
             heat = (p.views or 0) / max_views
-            prox, dist = campus_mod.proximity(lat, lng, p.seller.school if p.seller else "")
+            prox, dist = campus_mod.proximity(lat, lng, p.campus or (p.seller.school if p.seller else ""))
             score = 0.25 * pref + 0.15 * heat + (0.18 * prox if use_loc else 0)
             reason = "离你最近" if (use_loc and prox >= 0.5) else reason_for(p, [], cat_pref, viewed_titles)
             rows.append({
@@ -208,7 +208,7 @@ def rank(products, query, user=None, behaviors=None, limit=12, fill=False, lat=N
             if pref <= 0:
                 continue
             heat = (p.views or 0) / max_views
-            prox, dist = campus_mod.proximity(lat, lng, p.seller.school if p.seller else "")
+            prox, dist = campus_mod.proximity(lat, lng, p.campus or (p.seller.school if p.seller else ""))
             rows.append({
                 "product": p,
                 "score": round(0.25 * pref + 0.15 * heat + (0.18 * prox if use_loc else 0), 4),

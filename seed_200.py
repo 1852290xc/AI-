@@ -259,7 +259,11 @@ def main():
                                                       look=LOOK[cond], note=NOTE[cond])
                 desc += rng.choice([" 支持校内当面交易。", " 可小刀，非诚勿扰。", " 有意私信，看到秒回。",
                                     " 图书馆门口自提优先。", " 送小配件，先到先得。"])
-                image = product_card(cat_name, f"{brand} {kind}", cond, made)
+                shot = f"p2_{made:03d}.jpg"
+                if os.path.exists(os.path.join(UPLOADS, shot)):
+                    image = shot          # 有真实商品图优先用
+                else:
+                    image = product_card(cat_name, f"{brand} {kind}", cond, made)
 
                 p = Product(
                     title=title, description=desc, price=float(price),
