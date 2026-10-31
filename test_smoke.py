@@ -7,7 +7,7 @@ import sys
 
 from app import create_app
 from config import Config
-from models import Category, Order, Product, User, db
+from models import CartItem, Category, Order, Product, User, db
 from init_db import seed_data
 
 TEST_DB = os.path.join(Config.__dict__.get("BASE_DIR", os.path.dirname(__file__)), "data", "test_smoke.db")
@@ -158,6 +158,30 @@ def main():
 
         r = client.get("/api/health")
         check("28. 健康检查返回大模型接入状态", r.status_code == 200 and "llm" in (r.json or {}))
+
+        # ---------------- 购物车 / 浏览记录 / 搜索记录 ----------------
+        client.get("/auth/logout")
+        client.post("/auth/login", data={"account": "lisi", "password": "123456"})
+        target = Product.query.filter(Product.seller_id != User.query.filter_by(student_id="lisi").first().id,
+                                      Product.status == "onsale").first()
+        r = client.post(f"/cart/add/{target.id}")
+        check("29. 加入购物车成功", r.json and r.json.get("ok") is True and r.json.get("count", 0) >= 1)
+
+        r = client.get("/cart/")
+        check("30. 购物车页面显示该商品", r.status_code == 200 and target.title in r.get_data(as_text=True))
+
+        cart_item = CartItem.query.filter_by(product_id=target.id).first()
+        before_orders = Order.query.count()
+        r = client.post("/cart/checkout", data={"ids": str(cart_item.id)}, follow_redirects=True)
+        check("31. 结算选中商品并生成订单", Order.query.count() == before_orders + 1)
+
+        client.get(f"/product/{target.id}")
+        r = client.get("/history/")
+        check("32. 浏览记录按时间倒序列出", r.status_code == 200 and target.title in r.get_data(as_text=True))
+
+        client.get("/?q=%E9%94%AE%E7%9B%98")
+        r = client.get("/?q=%E9%94%AE%E7%9B%98")
+        check("33. 搜索记录被记住并展示", "最近搜索" in r.get_data(as_text=True))
 
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
