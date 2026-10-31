@@ -2,12 +2,45 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 
 import ai_engine
+import listing_ai
+from models import Category, Product
 
 bp = Blueprint("ai", __name__)
 
 
 def _payload():
     return request.get_json(silent=True) or request.form
+
+
+@bp.route("/analyze", methods=["POST"])
+def analyze():
+    """发布助手：类型 / 型号 / 成色 / 估价 / 建议。"""
+    d = _payload()
+    title = (d.get("title") or "").strip()
+    description = (d.get("description") or "").strip()
+    if len(title) < 2:
+        return jsonify({"ok": False, "message": "先写几个字的标题"})
+
+    cls = ai_engine.classify_product(title, description)
+    cat = Category.query.filter_by(name=cls["category"]).first()
+    comparables = []
+    if cat:
+        rows = (Product.query
+                .filter(Product.category_id == cat.id, Product.status.in_(["onsale", "sold"]))
+                .order_by(Product.created_at.desc()).limit(60).all())
+        comparables = [{"title": p.title, "price": p.price} for p in rows]
+
+    try:
+        original = float(d.get("original_price") or 0)
+    except (TypeError, ValueError):
+        original = 0.0
+
+    result = listing_ai.analyze_listing(
+        title, description, original, comparables, has_image=bool(d.get("has_image"))
+    )
+    result["ok"] = True
+    result["comparable_count"] = len(comparables)
+    return jsonify(result)
 
 
 @bp.route("/assistant")
