@@ -236,6 +236,35 @@ def main():
         r = client.get("/map?r=999")
         check("42. 非法半径回退不报错", r.status_code == 200)
 
+        # ---------------- 图片查重 / AI 痕迹 ----------------
+        import io as _io
+        from models import Product as _P
+        from PIL import Image as _Img
+        _buf = _io.BytesIO()
+        _Img.new("RGB", (600, 600), (120, 140, 200)).save(_buf, "JPEG")
+        raw = _buf.getvalue()
+        sample = _P.query.first()
+        sample.image = "t_check.jpg"
+        _upload = os.path.join("static", "uploads", "t_check.jpg")
+        os.makedirs(os.path.dirname(_upload), exist_ok=True)
+        with open(_upload, "wb") as fh:
+            fh.write(raw)
+        db.session.commit()
+
+        r = client.post("/ai/image-check", data={"file": (_io.BytesIO(raw), "a.jpg")},
+                        content_type="multipart/form-data")
+        j = r.json or {}
+        check("43. 图片检测返回 AI 痕迹评分", r.status_code == 200 and "ai" in j and "score" in j["ai"])
+
+        top = (j.get("duplicates") or [{}])[0]
+        check("44. 同图能被查重命中", j.get("is_duplicate") is True and top.get("same") is True)
+
+        r = client.post("/ai/image-check",
+                        data={"file": (_io.BytesIO(raw), "a.jpg"), "reference": (_io.BytesIO(raw), "b.jpg")},
+                        content_type="multipart/form-data")
+        cmp = (r.json or {}).get("compare") or {}
+        check("45. 与参考图比对判定为同一张", cmp.get("same") is True and cmp.get("phash_sim", 0) > 0.9)
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()
