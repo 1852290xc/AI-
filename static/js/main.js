@@ -171,6 +171,79 @@
     });
   }
 
+
+  /* ---------------------------------------------------------- AI 发布助手 */
+  const det = document.getElementById("aiDetect");
+  if (det) {
+    const dTitle = document.getElementById("fTitle");
+    const dDesc = document.getElementById("fDesc");
+    const dOrig = document.getElementById("fOriginal");
+    const dCat = document.getElementById("detCat");
+    const dModel = document.getElementById("detModel");
+    const dCond = document.getElementById("detCond");
+    const dValue = document.getElementById("detValue");
+    const dSource = document.getElementById("detSource");
+    const dAdvice = document.getElementById("detAdvice");
+    let latest = null;
+
+    let condTouched = false;
+    const condSel = document.getElementById("fCond");
+    if (condSel) condSel.addEventListener("change", () => { condTouched = true; });
+
+    const render = (r) => {
+      latest = r;
+      det.hidden = false;
+      // 用户没手动改过成色时，跟随 AI 判断（仍可改回）
+      if (!condTouched && r.condition && condSel && condSel.value !== r.condition) {
+        condSel.value = r.condition;
+        condSel.dispatchEvent(new Event("change", { bubbles: true }));
+        condTouched = false;
+      }
+      dCat.textContent = r.category + " · " + Math.round(r.confidence * 100) + "%";
+      dModel.textContent = (r.model && r.model.length) ? r.model.join(" / ") : "未识别到型号";
+      dCond.textContent = r.condition || "未判断出成色";
+      dValue.textContent = "¥" + r.value.low + " – " + r.value.high + "（建议 ¥" + r.value.mid + "）";
+      dSource.textContent = r.value.source;
+      dAdvice.innerHTML = (r.advice || []).map((t) => "<li>" + t + "</li>").join("");
+    };
+
+    const runAnalyze = debounce(async () => {
+      const t = (dTitle.value || "").trim();
+      if (t.length < 2) { return; }
+      try {
+        const r = await postJSON("/ai/analyze", {
+          title: t,
+          description: dDesc.value,
+          original_price: dOrig.value,
+          has_image: !!(document.getElementById("fImage").files || []).length,
+        });
+        if (r && r.ok) render(r);
+      } catch (e) {}
+    }, 500);
+
+    [dTitle, dDesc, dOrig].forEach((el) => el && el.addEventListener("input", runAnalyze));
+
+    det.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("[data-adopt]");
+      if (!btn || !latest) return;
+      const kind = btn.dataset.adopt;
+      if (kind === "category") {
+        const sel = document.getElementById("fCat");
+        const opt = Array.from(sel.options).find((o) => o.textContent.includes(latest.category));
+        if (opt) sel.value = opt.value;
+      } else if (kind === "condition") {
+        const sel = document.getElementById("fCond");
+        if (latest.condition) sel.value = latest.condition;
+      } else if (kind === "price") {
+        const inp = document.getElementById("fPrice");
+        if (!inp.value) inp.value = latest.value.mid;
+        inp.placeholder = "建议 " + latest.value.mid;
+      }
+      btn.textContent = "已采用 ✓";
+      setTimeout(() => { btn.textContent = btn.dataset.original || "采用"; }, 1500);
+    });
+  }
+
   /* ---------------------------------------------------------- 收藏 */
   const favBtn = $("#favBtn");
   if (favBtn) {

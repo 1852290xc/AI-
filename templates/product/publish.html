@@ -28,6 +28,26 @@
                     placeholder="写清成色、使用时长、附带配件、交易方式…">{{ form.get('description', '') }}</textarea>
         </label>
 
+
+      <div class="ai-detect" id="aiDetect" hidden>
+        <div class="ai-detect-head">
+          <span class="ai-label">AI 发布助手</span>
+          <span class="muted small">仅作建议，可随时忽略</span>
+        </div>
+        <div class="ai-detect-grid">
+          <div class="ai-kv"><span>类型</span><b id="detCat">—</b></div>
+          <div class="ai-kv"><span>型号</span><b id="detModel">—</b></div>
+          <div class="ai-kv"><span>成色</span><b id="detCond">—</b></div>
+          <div class="ai-kv"><span>估价</span><b id="detValue">—</b></div>
+        </div>
+        <div class="ai-detect-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-adopt="category">用这个分类</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-adopt="condition">用这个成色</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-adopt="price">用这个价格</button>
+          <span class="muted small" id="detSource"></span>
+        </div>
+        <ul class="ai-advice" id="detAdvice"></ul>
+      </div>
         <div class="ai-card" id="aiCopyCard" hidden>
           <div class="ai-card-head">
             <span class="ai-label">AI 文案建议</span>
