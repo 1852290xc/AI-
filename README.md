@@ -80,6 +80,15 @@ python app.py
 
 浏览器打开 <http://127.0.0.1:5000>。
 
+### 生成 200 件演示商品
+
+```bash
+python seed_200.py --reset      # 6 个品类、200 件、含图片与描述
+```
+
+图片为本地生成的商品卡（`static/uploads/p_*.jpg`），保证图文一致；
+如需换成实拍图，把照片放进 `static/uploads/` 并改 `seed_200.py` 里的 `product_card()` 即可。
+
 ### 演示账号
 
 | 角色 | 账号 | 密码 |
