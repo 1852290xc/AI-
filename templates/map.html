@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}附近高校地图 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page map-page">
+  <div class="page-head">
+    <h1>全国高校地图</h1>
+    <span class="muted small">
+      {% if located %}你在 {{ loc_campus }}，已标注各校到你的距离{% else %}未定位，先看全国分布{% endif %}
+    </span>
+  </div>
+
+  {% if not located %}
+    <div class="loc-bar">
+      📍 还没定位，距离无法计算。点右上角「开启定位」后，这里会显示每所高校离你多远。
+      <button class="btn btn-ghost btn-sm" id="locBtnMap">开启定位</button>
+    </div>
+  {% endif %}
+
+  <div class="radius-bar">
+    <span class="muted small">筛选半径</span>
+    {% for r in [5, 10, 50, 100, 0] %}
+      <a class="chip {{ 'on' if radius == r }}" href="{{ url_for('main.map_view', r=r) }}">
+        {{ '不限' if r == 0 else r ~ ' km' }}
+      </a>
+    {% endfor %}
+    <span class="muted small" style="margin-left:auto">
+      当前半径内：{{ total }} 件商品 · {{ unis|selectattr('in')|list|length }} 所高校
+    </span>
+  </div>
+
+  <div class="map-wrap">
+    <svg class="cn-map" viewBox="0 0 900 600" role="img" aria-label="全国高校分布示意地图">
+      <defs>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#2563eb" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect x="0" y="0" width="900" height="600" fill="#f4f8fd"/>
+      <path d="{{ china_path }}" fill="#e8f0fb" stroke="#b9cde8" stroke-width="1"
+            fill-rule="evenodd" stroke-linejoin="round"/>
+      {% for lon in range(75, 136, 10) %}
+        {% set x = (lon - 73) / 62 * 900 %}
+        <line x1="{{ x }}" y1="0" x2="{{ x }}" y2="600" stroke="#e6ecf7" stroke-width="1"/>
+        <text x="{{ x + 4 }}" y="592" class="axis">{{ lon }}°E</text>
+      {% endfor %}
+      {% for lat in range(20, 55, 10) %}
+        {% set y = (54 - lat) / 36 * 600 %}
+        <line x1="0" y1="{{ y }}" x2="900" y2="{{ y }}" stroke="#e6ecf7" stroke-width="1"/>
+        <text x="6" y="{{ y - 5 }}" class="axis">{{ lat }}°N</text>
+      {% endfor %}
+
+      {% if located and user_x %}
+        <circle cx="{{ user_x }}" cy="{{ user_y }}" r="46" fill="url(#glow)"/>
+        <circle cx="{{ user_x }}" cy="{{ user_y }}" r="6" fill="#ef4444" stroke="#fff" stroke-width="2"/>
+        <text x="{{ user_x + 10 }}" y="{{ user_y - 10 }}" class="me-label">你 · {{ loc_campus }}</text>
+      {% endif %}
+
+      {% for u in unis %}
+        <g class="uni {{ 'in' if u.in else 'out' }}">
+          <circle cx="{{ u.x }}" cy="{{ u.y }}"
+                  r="{{ 10 if u.name == loc_campus else (5.5 if u.in else 4) }}"
+                  class="{{ 'me' if u.name == loc_campus else '' }}"/>
+          {% if u.in and u.km is not none %}
+            <title>{{ u.name }} · {{ u.city }} · 距你 {{ u.km }} km</title>
+          {% else %}
+            <title>{{ u.name }} · {{ u.city }}</title>
+          {% endif %}
+        </g>
+      {% endfor %}
+
+      {% for u in label_unis %}
+        <text x="{{ u.lx }}" y="{{ u.ly }}" class="uni-label">{{ u.name }}</text>
+      {% endfor %}
+    </svg>
+
+    <aside class="map-side">
+      <h3>离你最近的高校</h3>
+      {% if nearest %}
+        <ol class="uni-list">
+          {% for u in nearest %}
+            <li class="{{ 'on' if u.in else '' }}">
+              <b>{{ u.name }}</b>
+              <span class="muted small">{{ u.city }}</span>
+              <span class="km">{{ u.km }} km</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="muted small">开启定位后显示距离排序。</p>
+      {% endif %}
+      <p class="muted small map-legend">
+        <i class="dot in"></i> 半径内　<i class="dot out"></i> 半径外　<i class="dot me"></i> 你所在的校区
+      </p>
+    </aside>
+  </div>
+
+  {% if rows %}
+    <div class="section-head">
+      <h2>半径内的闲置</h2>
+      <span class="muted small">按距离由近到远</span>
+    </div>
+    <div class="grid">
+      {% for r in rows %}
+        {% set p = r.product %}
+        {% set reason = r.reason ~ (' · ' ~ r.distance ~ ' km' if r.distance else '') %}
+        {% include "_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">这个半径内还没有商品</p>
+      <p class="muted">把半径调大一点试试。</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var b = document.getElementById("locBtnMap");
+  if (!b) return;
+  b.addEventListener("click", function(){
+    if (!navigator.geolocation) { alert("浏览器不支持定位"); return; }
+    b.textContent = "定位中…";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      fetch("/api/location", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({lat: pos.coords.latitude, lng: pos.coords.longitude}),
+      }).then(function(){ location.reload(); });
+    }, function(){
+      b.textContent = "开启定位";
+      alert("没有拿到定位权限");
+    }, {timeout: 8000});
+  });
+})();
+</script>
+{% endblock %}

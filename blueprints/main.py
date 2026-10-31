@@ -4,6 +4,7 @@ from flask_login import current_user
 import ai_engine
 import campus
 import llm
+from china_geo import CHINA_PATH
 import search_engine
 from config import Config
 from models import Behavior, Category, Product, SearchHistory, db
@@ -195,6 +196,54 @@ def clear_search_history():
         SearchHistory.query.filter_by(user_id=current_user.id).delete()
         db.session.commit()
     return redirect(url_for("main.index"))
+
+
+@bp.route("/map")
+def map_view():
+    """全国高校地图：标注距离，支持 5/10/50/100 km 半径筛选。"""
+    lat, lng = _location()
+    radius = request.args.get("r", 50, type=int)
+    if radius not in (5, 10, 50, 100, 0):
+        radius = 50
+
+    unis = campus.all_campuses(lat, lng)
+    for u in unis:
+        u["in"] = radius == 0 or (u["km"] is not None and u["km"] <= radius)
+        u["x"] = round((u["lng"] - 73.0) / (135.5 - 73.0) * 900, 1)
+        u["y"] = round((53.8 - u["lat"]) / (53.8 - 18.0) * 600, 1)
+
+    # 商品按卖家校区是否在半径内筛选
+    pool = Product.query.filter_by(status="onsale").all()
+    shown, cutoff = [], {}
+    for p in pool:
+        school = p.campus or (p.seller.school if p.seller else "")
+        c = campus.coords(school)
+        d = campus.distance_km(lat, lng, c[0], c[1]) if (c and lat is not None) else None
+        if radius == 0 or d is None or (d is not None and d <= radius):
+            shown.append({"product": p, "distance": round(d, 1) if d is not None else None,
+                          "reason": f"来自{school}" if school else "校园闲置"})
+
+    shown.sort(key=lambda r: (r["distance"] is None, r["distance"] or 0))
+    nearest = [u for u in unis if u["km"] is not None][:8]
+    label_unis = []
+    ux = round((lng - 73.0) / (135.5 - 73.0) * 900, 1) if lng else 0
+    uy = round((53.8 - lat) / (53.8 - 18.0) * 600, 1) if lat else 0
+    for i, u in enumerate(nearest[:5]):
+        v = dict(u)
+        # 标签统一排在定位点右侧并纵向错开，避免北京高校扎堆重叠
+        v["lx"] = ux + 20
+        v["ly"] = uy - 30 + i * 17
+        label_unis.append(v)
+
+    return render_template(
+        "map.html", unis=unis, nearest=nearest, radius=radius,
+        rows=shown[:12], total=len(shown), located=lat is not None,
+        user_lat=lat, user_lng=lng,
+        user_x=round((lng - 73.0) / (135.5 - 73.0) * 900, 1) if lng else None,
+        user_y=round((53.8 - lat) / (53.8 - 18.0) * 600, 1) if lat else None,
+        china_path=CHINA_PATH, label_unis=label_unis,
+        loc_campus=(campus.nearest_campus(lat, lng)[0] if lat is not None else ""),
+    )
 
 
 @bp.route("/about")

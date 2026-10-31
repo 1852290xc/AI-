@@ -478,3 +478,30 @@ h3 { font-size: 15px; color: var(--muted); font-weight: 600; text-transform: non
   background:var(--blue-soft); border:1px solid #dbe6ff; color:#1e3a8a;
   border-radius:12px; padding:9px 14px; margin:0 0 14px; font-size:13.5px;
 }
+
+
+/* ---------- 高校地图 ---------- */
+.radius-bar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 14px}
+.radius-bar .chip{border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 13px; font-size:13px; color:#374151}
+.radius-bar .chip.on{background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600}
+.map-wrap{display:grid; grid-template-columns:1fr 300px; gap:16px; align-items:start}
+.cn-map{width:100%; height:auto; border:1px solid var(--line); border-radius:14px; background:#fff; display:block}
+.cn-map .axis{font-size:10px; fill:#a8b3c4; font-family:ui-monospace,monospace}
+.cn-map .me-label{font-size:12px; fill:#ef4444; font-weight:600}
+.cn-map .uni-label{font-size:10.5px; fill:#64748b}
+.uni circle{fill:#94a3b8; transition:.15s}
+.uni.in circle{fill:#2563eb}
+.uni.out circle{fill:#cbd5e1}
+.uni circle.me{fill:#ef4444}
+.uni:hover circle{fill:#1d4ed8}
+.map-side{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px}
+.map-side h3{margin:0 0 10px}
+.uni-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.uni-list li{display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:baseline; font-size:13px}
+.uni-list li b{font-weight:600}
+.uni-list li.on b{color:var(--blue)}
+.uni-list .km{color:#64748b; font-variant-numeric:tabular-nums}
+.map-legend{margin-top:14px; display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block}
+.dot.in{background:#2563eb} .dot.out{background:#cbd5e1} .dot.me{background:#ef4444}
+@media (max-width:900px){ .map-wrap{grid-template-columns:1fr} }
