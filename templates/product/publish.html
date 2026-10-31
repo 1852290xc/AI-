@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}发布闲置 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <h1>发布闲置</h1>
+    <p class="muted">边写边看 AI 的建议：分类、定价、文案、违规检测</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="form publish" id="publishForm">
+    <div class="publish-main">
+      <div class="panel">
+        <h3>基本信息</h3>
+
+        <label>标题
+          <input type="text" name="title" id="fTitle" required minlength="3"
+                 value="{{ form.get('title', '') }}" placeholder="例如：九成新 iPad Air 5 64G">
+        </label>
+
+        <div class="ai-hint" id="aiCategory">
+          <span class="ai-label">AI 分类</span>
+          <span class="ai-body">输入标题后自动判断品类</span>
+        </div>
+
+        <label>描述
+          <textarea name="description" id="fDesc" rows="6"
+                    placeholder="写清成色、使用时长、附带配件、交易方式…">{{ form.get('description', '') }}</textarea>
+        </label>
+
+        <div class="ai-card" id="aiCopyCard" hidden>
+          <div class="ai-card-head">
+            <span class="ai-label">AI 文案建议</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnUseCopy">一键采纳</button>
+          </div>
+          <p id="aiCopyText" class="ai-copy"></p>
+        </div>
+
+        <div class="form-row">
+          <label>分类
+            <select name="category_id" id="fCat">
+              <option value="">让 AI 自动判断</option>
+              {% for c in categories %}
+                <option value="{{ c.id }}" {{ 'selected' if form.get('category_id') == c.id|string }}>
+                  {{ c.icon }} {{ c.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>成色
+            <select name="condition" id="fCond">
+              {% for cond in ['全新', '九成新', '八成新', '七成新', '有瑕疵'] %}
+                <option value="{{ cond }}" {{ 'selected' if form.get('condition') == cond }}>{{ cond }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>原价（元）
+            <input type="number" name="original_price" id="fOriginal" step="0.01" min="0"
+                   value="{{ form.get('original_price', '') }}" placeholder="入手价">
+          </label>
+          <label>出售价（元）
+            <input type="number" name="price" id="fPrice" step="0.01" min="0" required
+                   value="{{ form.get('price', '') }}" placeholder="你打算卖多少">
+          </label>
+        </div>
+
+        <div class="ai-hint" id="aiPrice">
+          <span class="ai-label">AI 定价</span>
+          <span class="ai-body">填写原价与成色后给出参考区间</span>
+        </div>
+
+        <label>图片（png / jpg / gif / webp，≤ 5MB）
+          <input type="file" name="image" id="fImage" accept="image/*">
+        </label>
+        <div class="preview" id="preview" hidden>
+          <img alt="预览" id="previewImg">
+        </div>
+
+        <div class="ai-hint" id="aiTags">
+          <span class="ai-label">AI 标签</span>
+          <span class="ai-body">会根据标题和描述自动提取</span>
+        </div>
+
+        <div class="ai-warn" id="aiModerate" hidden></div>
+
+        <button class="btn btn-primary btn-block" type="submit">确认发布</button>
+      </div>
+    </div>
+
+    <aside class="publish-side">
+      <div class="panel">
+        <h3>发布小贴士</h3>
+        <ul class="list muted">
+          <li>标题写清型号 + 成色，成交快一倍</li>
+          <li>原价如实填，AI 定价才准</li>
+          <li>违规词会在提交前被拦下，改完再发</li>
+          <li>建议校内当面交易，当面验货</li>
+        </ul>
+      </div>
+    </aside>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.PAGE = "publish";
+</script>
+{% endblock %}

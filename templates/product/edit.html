@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}编辑商品 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <h1>编辑商品</h1>
+    <p class="muted">修改后同样会经过 AI 审核</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="form">
+    <div class="panel">
+      <label>标题
+        <input type="text" name="title" value="{{ p.title }}" required minlength="3">
+      </label>
+      <label>描述
+        <textarea name="description" rows="6">{{ p.description }}</textarea>
+      </label>
+
+      <div class="form-row">
+        <label>分类
+          <select name="category_id">
+            {% for c in cats %}
+              <option value="{{ c.id }}" {{ 'selected' if p.category_id == c.id }}>{{ c.icon }} {{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>成色
+          <select name="condition">
+            {% for cond in ['全新', '九成新', '八成新', '七成新', '有瑕疵'] %}
+              <option value="{{ cond }}" {{ 'selected' if p.condition == cond }}>{{ cond }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>原价
+          <input type="number" name="original_price" step="0.01" min="0" value="{{ p.original_price or '' }}">
+        </label>
+        <label>出售价
+          <input type="number" name="price" step="0.01" min="0" required value="{{ p.price }}">
+        </label>
+      </div>
+
+      {% if p.image %}
+        <div class="preview">
+          <img src="{{ url_for('static', filename='uploads/' ~ p.image) }}" alt="当前图片">
+        </div>
+      {% endif %}
+      <label>更换图片（留空则保留原图）
+        <input type="file" name="image" accept="image/*">
+      </label>
+
+      <div class="form-row">
+        <button class="btn btn-primary" type="submit">保存修改</button>
+        <a class="btn btn-ghost" href="{{ url_for('product.detail', pid=p.id) }}">取消</a>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}我的商品 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <h1>我的商品</h1>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('product.publish') }}">发布新商品</a>
+  </div>
+
+  {% if items %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>商品</th><th>价格</th><th>状态</th><th>浏览</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+          {% for p in items %}
+            <tr>
+              <td>
+                <a href="{{ url_for('product.detail', pid=p.id) }}">{{ p.title }}</a>
+                <div class="muted small">{{ p.category.name if p.category else '未分类' }} · {{ p.condition }}</div>
+              </td>
+              <td>¥{{ '%.0f'|format(p.price) }}</td>
+              <td>
+                {% if p.status == 'onsale' %}<span class="pill pill-ok">在售</span>
+                {% elif p.status == 'sold' %}<span class="pill">已售</span>
+                {% else %}<span class="pill pill-off">已下架</span>{% endif %}
+              </td>
+              <td>{{ p.views }}</td>
+              <td class="ops">
+                <a class="btn btn-ghost btn-sm" href="{{ url_for('product.edit', pid=p.id) }}">编辑</a>
+                <form method="post" action="{{ url_for('product.take_off', pid=p.id) }}" class="inline">
+                  <button class="btn btn-ghost btn-sm" type="submit">
+                    {{ '下架' if p.status == 'onsale' else '上架' }}
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('product.delete', pid=p.id) }}" class="inline"
+                      onsubmit="return confirm('确定删除这件商品吗？')">
+                  <button class="btn btn-danger btn-sm" type="submit">删除</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">还没有发布过商品</p>
+      <a class="btn btn-primary" href="{{ url_for('product.publish') }}">发布第一件</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
