@@ -505,3 +505,7 @@ h3 { font-size: 15px; color: var(--muted); font-weight: 600; text-transform: non
 .dot{width:8px; height:8px; border-radius:50%; display:inline-block}
 .dot.in{background:#2563eb} .dot.out{background:#cbd5e1} .dot.me{background:#ef4444}
 @media (max-width:900px){ .map-wrap{grid-template-columns:1fr} }
+
+
+/* ---------- 图片检测 ---------- */
+.img-check-body p{margin:4px 0; font-size:13px}

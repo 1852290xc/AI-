@@ -147,6 +147,7 @@
         }
         img.src = URL.createObjectURL(f);
         box.hidden = false;
+        checkImage(f);
       });
     }
   }
@@ -211,6 +212,58 @@
     });
   }
 
+
+
+  async function checkImage(file) {
+    const panel = document.getElementById("imgCheck");
+    const body = document.getElementById("imgCheckBody");
+    if (!panel || !body) return;
+    panel.hidden = false;
+    body.innerHTML = '<p class="muted small">检测中…</p>';
+
+    const fd = new FormData();
+    fd.append("file", file);
+    const refUrl = panel.dataset.reference;
+    if (refUrl) {
+      try {
+        const blob = await (await fetch(refUrl)).blob();
+        fd.append("reference", blob, "reference.jpg");
+      } catch (e) {}
+    }
+
+    let data;
+    try {
+      const res = await fetch("/ai/image-check", { method: "POST", body: fd });
+      data = await res.json();
+    } catch (e) {
+      body.innerHTML = '<p class="warn-text">检测失败，稍后再试</p>';
+      return;
+    }
+    if (!data.ok) {
+      body.innerHTML = '<p class="warn-text">' + (data.message || "检测失败") + "</p>";
+      return;
+    }
+
+    const d = data.duplicates && data.duplicates[0];
+    const dupLine = (d && d.same)
+      ? '<p class="warn-text">⚠ 查重命中：与已有商品「' + (d.title || d.image) + '」是同一张图（相似度 ' +
+        Math.round(d.sim * 100) + '%）</p>'
+      : (d ? '<p class="muted small">查重：与库内最相似的图只有 ' + Math.round(d.sim * 100) + '% 相似，不构成重复</p>'
+           : '<p class="muted small">查重：库里还没有可比的图片</p>');
+
+    const ai = data.ai;
+    const aiClass = ai.score >= 60 ? "warn-text" : (ai.score >= 30 ? "muted" : "muted small");
+    const aiLine = '<p class="' + aiClass + '">AI 痕迹：' + ai.verdict + '（' + ai.score + '/100）' +
+      (ai.reasons.length ? " · " + ai.reasons.slice(0, 2).join("；") : "") + "</p>";
+
+    let cmpLine = "";
+    if (data.compare) {
+      cmpLine = '<p class="' + (data.compare.same ? "warn-text" : "muted small") + '">与参考图比对：' +
+        data.compare.verdict + "（相似度 " + Math.round(data.compare.phash_sim * 100) + "%）</p>";
+    }
+
+    body.innerHTML = dupLine + aiLine + cmpLine;
+  }
 
   /* ---------------------------------------------------------- AI 发布助手 */
   const det = document.getElementById("aiDetect");

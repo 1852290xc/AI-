@@ -95,6 +95,13 @@
         <label>图片（png / jpg / gif / webp，≤ 5MB）
           <input type="file" name="image" id="fImage" accept="image/*">
         </label>
+        <div class="ai-detect" id="imgCheck" hidden>
+          <div class="ai-detect-head">
+            <span class="ai-label">图片检测</span>
+            <span class="muted small">查重 · AI 痕迹</span>
+          </div>
+          <div id="imgCheckBody" class="img-check-body"></div>
+        </div>
         <div class="preview" id="preview" hidden>
           <img alt="预览" id="previewImg">
         </div>
