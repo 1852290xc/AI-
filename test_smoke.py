@@ -202,6 +202,19 @@ def main():
         r = client.get("/product/publish")
         check("36. 发布页包含 AI 助手面板", r.status_code == 200 and "AI 发布助手" in r.get_data(as_text=True))
 
+        # ---------------- 定位与附近优先 ----------------
+        client.get("/auth/logout")
+        r = client.post("/api/location", json={"lat": 39.9990, "lng": 116.3260})
+        check("37. 提交定位返回最近校区",
+              r.status_code == 200 and r.json.get("ok") and r.json.get("campus") == "示范大学")
+
+        r = client.get("/")
+        body = r.get_data(as_text=True)
+        check("38. 首页按附近校区优先展示", "已按「示范大学」附近" in body)
+
+        r = client.post("/api/location", json={"lat": 999, "lng": 999})
+        check("39. 非法坐标被拒绝", r.status_code == 400 and r.json.get("ok") is False)
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()
