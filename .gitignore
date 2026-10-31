@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 data/*.db
 static/uploads/*
+!static/uploads/p2_*.jpg
 !static/uploads/.gitkeep
 .vscode/
 .venv/
