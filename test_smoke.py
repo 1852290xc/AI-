@@ -183,6 +183,25 @@ def main():
         r = client.get("/?q=%E9%94%AE%E7%9B%98")
         check("33. 搜索记录被记住并展示", "最近搜索" in r.get_data(as_text=True))
 
+        # ---------------- 发布助手（类型/型号/成色/估价） ----------------
+        client.get("/auth/logout")
+        client.post("/auth/login", data={"account": "zhangsan", "password": "123456"})
+        r = client.post("/ai/analyze", json={
+            "title": "九成新 iPhone 13 128G 星光色",
+            "description": "自用一年，电池健康 87%",
+            "original_price": 5999,
+        })
+        j = r.json or {}
+        check("34. 发布助手识别型号与成色",
+              j.get("ok") is True and "iPhone 13" in " ".join(j.get("model", [])) and j.get("condition") == "九成新")
+
+        check("35. 发布助手给出估价区间与建议",
+              j.get("value", {}).get("low", 0) < j.get("value", {}).get("mid", 0) <= j.get("value", {}).get("high", 0)
+              and len(j.get("advice", [])) >= 2)
+
+        r = client.get("/product/publish")
+        check("36. 发布页包含 AI 助手面板", r.status_code == 200 and "AI 发布助手" in r.get_data(as_text=True))
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()
