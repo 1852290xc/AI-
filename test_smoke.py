@@ -278,6 +278,39 @@ def main():
         check("49. 详情页展示三种收货方式",
               all(k in body for k in ("快递运输", "跑腿", "自取", "AI 最优推荐")))
 
+        # ---------------- 商品检测报告 / 扫物识别 ----------------
+        import io as _io2
+        import inspection as _insp
+
+        r = client.get(f"/product/{_P.query.first().id}")
+        body = r.get_data(as_text=True)
+        check("50. 详情页展示商品检测报告",
+              r.status_code == 200 and "商品检测报告" in body and "质检分" in body and "质量保证" in body)
+
+        _pr = _P.query.first()
+        _rpt = _insp.build_report(_pr, duplicates_same=False, price_median=_pr.price)
+        check("51. 质检报告结构完整",
+              isinstance(_rpt["score"], int) and _rpt["level"] in ("A", "B", "C")
+              and len(_rpt["checks"]) >= 5 and len(_rpt["guarantee"]) >= 2)
+
+        _cand = [x for x in _P.query.filter_by(status="onsale").all()
+                 if x.image and os.path.exists(os.path.join("static", "uploads", x.image))]
+        if not _cand:
+            from PIL import Image as _Img2
+            _p2 = _P.query.filter_by(status="onsale").first()
+            _p2.image = "t_scan.jpg"
+            _Img2.new("RGB", (600, 600), (90, 120, 200)).save(os.path.join("static", "uploads", "t_scan.jpg"))
+            db.session.commit()
+            _cand = [_p2]
+        _path = os.path.join("static", "uploads", _cand[0].image)
+        with open(_path, "rb") as fh:
+            _raw2 = fh.read()
+        r = client.post("/ai/scan", data={"file": (_io2.BytesIO(_raw2), "s.jpg")},
+                        content_type="multipart/form-data")
+        _j = r.json or {}
+        check("52. 扫物识别能匹配到同款",
+              r.status_code == 200 and _j.get("ok") and (_j.get("match") or {}).get("id") is not None)
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()

@@ -97,6 +97,55 @@ def image_check():
     return jsonify(result)
 
 
+@bp.route("/scan", methods=["POST"])
+def scan_item():
+    """扫物识别：上传一张图，匹配站内最相似的商品，给出品类/型号/估价。"""
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"ok": False, "message": "没有收到图片"}), 400
+    try:
+        img = image_ai.load_image(f.stream)
+    except Exception:
+        return jsonify({"ok": False, "message": "图片无法解析"}), 400
+
+    target = image_ai.dhash(img)
+    best, best_sim = None, 0.0
+    for p in Product.query.filter(Product.status == "onsale").limit(400).all():
+        if not p.image:
+            continue
+        h = image_ai.hash_of_file(os.path.join(Config.UPLOAD_FOLDER, p.image))
+        if h is None:
+            continue
+        sim = image_ai.similarity(target, h)
+        if sim > best_sim:
+            best, best_sim = p, sim
+
+    score, reasons = image_ai.ai_traces(img, image_ai.read_meta(img))
+    label = "未匹配到同款" if not best else ("高度相似" if best_sim >= 0.88 else "相似商品")
+
+    out = {
+        "ok": True,
+        "recognized": bool(best) and best_sim >= 0.7,
+        "label": label,
+        "similarity": round(best_sim, 3),
+        "ai_trace": {"score": score, "verdict": image_ai.verdict_of(score), "reasons": reasons},
+    }
+    if best:
+        cls = ai_engine.classify_product(best.title, best.description or "")
+        out["match"] = {
+            "id": best.id,
+            "title": best.title,
+            "category": cls["category"],
+            "condition": best.condition,
+            "price": best.price,
+            "image": "/static/uploads/" + best.image,
+        }
+        prices = sorted([x.price for x in Product.query.filter_by(category_id=best.category_id, status="onsale") if x.price])
+        if prices:
+            out["price_range"] = [prices[0], prices[-1], prices[len(prices) // 2]]
+    return jsonify(out)
+
+
 @bp.route("/assistant")
 def assistant():
     return render_template("ai/assistant.html")

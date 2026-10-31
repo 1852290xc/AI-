@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 
 import ai_engine
 import delivery
+import inspection
 import campus as campus_mod
 from config import Config
 from models import Behavior, Category, Favorite, Product, db
@@ -131,7 +132,24 @@ def detail(pid):
             km = campus_mod.distance_km(lat, lng, spot[0], spot[1])
     ship = delivery.recommend(km, product.price or 0, product.title or "")
 
-    return render_template("product/detail.html", p=product, is_fav=is_fav, related=related, ship=ship)
+    # 质检报告：查重 + 同类价格中位数
+    dup = False
+    if product.image:
+        cur_hash = inspection.image_ai.hash_of_file(os.path.join(Config.UPLOAD_FOLDER, product.image))
+        if cur_hash is not None:
+            others = [x for x in Product.query.filter(Product.id != product.id, Product.image.isnot(None)).limit(300)]
+            for o in others:
+                h = inspection.image_ai.hash_of_file(os.path.join(Config.UPLOAD_FOLDER, o.image or ""))
+                if h is not None and inspection.image_ai.similarity(cur_hash, h) >= 0.88:
+                    dup = True
+                    break
+    prices = sorted([x.price for x in Product.query.filter_by(category_id=product.category_id, status="onsale")
+                     if x.price])
+    median = prices[len(prices) // 2] if prices else None
+    report = inspection.build_report(product, duplicates_same=dup, price_median=median)
+
+    return render_template("product/detail.html", p=product, is_fav=is_fav, related=related,
+                           ship=ship, report=report)
 
 
 @bp.route("/<int:pid>/edit", methods=["GET", "POST"])

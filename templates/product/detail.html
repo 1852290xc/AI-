@@ -63,6 +63,41 @@
     {% endif %}
 
     {% if ship %}
+{% if report %}
+<section class="qc-panel qc-{{ report.level }}">
+  <div class="qc-head">
+    <div class="qc-score">
+      <b>{{ report.score }}</b><span>质检分</span>
+    </div>
+    <div class="qc-title">
+      <div class="qc-label">商品检测报告 · {{ report.label }}</div>
+      <div class="muted small">买家下单前可见 · 检测项 {{ report.checks|length }} 项</div>
+    </div>
+    <span class="qc-badge">{{ report.level }} 级</span>
+  </div>
+
+  <div class="qc-grid">
+    {% for name, ok, note in report.checks %}
+    <div class="qc-item{{ '' if ok else ' bad' }}">
+      <span class="qc-ico">{{ '✓' if ok else '!' }}</span>
+      <div><b>{{ name }}</b><span class="muted small">{{ note }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if report.risks %}
+  <div class="qc-risks">
+    <b>需要注意</b>
+    <ul>{% for r in report.risks %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="qc-guarantee">
+    <b>质量保证</b>
+    <ul>{% for g in report.guarantee %}<li>{{ g }}</li>{% endfor %}</ul>
+  </div>
+</section>
+{% endif %}
 <section class="ship-panel">
   <div class="ship-head">
     <span class="ai-label">AI 最优推荐</span>
