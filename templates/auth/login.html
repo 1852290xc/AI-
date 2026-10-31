@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}登录 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <div class="auth-card">
+    <h1>欢迎回来</h1>
+    <p class="muted">用学号或邮箱登录</p>
+
+    <form method="post" class="form">
+      <label>学号 / 邮箱
+        <input type="text" name="account" value="{{ form.get('account', '') }}" required autofocus>
+      </label>
+      <label>密码
+        <input type="password" name="password" required>
+      </label>
+      <label class="checkline">
+        <input type="checkbox" name="remember"> 记住我
+      </label>
+      <button class="btn btn-primary btn-block" type="submit">登录</button>
+    </form>
+
+    <p class="auth-foot">还没有账号？<a href="{{ url_for('auth.register') }}">立即注册</a></p>
+    <p class="muted small">演示账号：zhangsan / 123456　·　管理员：admin / admin123</p>
+  </div>
+</section>
+{% endblock %}

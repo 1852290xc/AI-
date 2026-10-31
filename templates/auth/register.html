@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}注册 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <div class="auth-card">
+    <h1>加入校园集市</h1>
+    <p class="muted">用学校邮箱注册，交易更可信</p>
+
+    <form method="post" class="form">
+      <label>昵称
+        <input type="text" name="nickname" value="{{ form.get('nickname', '') }}" required minlength="2">
+      </label>
+      <div class="form-row">
+        <label>学号
+          <input type="text" name="student_id" value="{{ form.get('student_id', '') }}" required
+                 pattern="[A-Za-z0-9]{4,20}" title="4–20 位字母或数字">
+        </label>
+        <label>学校
+          <input type="text" name="school" value="{{ form.get('school', '示范大学') }}">
+        </label>
+      </div>
+      <label>邮箱
+        <input type="email" name="email" value="{{ form.get('email', '') }}" required>
+      </label>
+      <div class="form-row">
+        <label>密码
+          <input type="password" name="password" required minlength="6">
+        </label>
+        <label>确认密码
+          <input type="password" name="confirm" required minlength="6">
+        </label>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">注册并登录</button>
+    </form>
+
+    <p class="auth-foot">已经有账号？<a href="{{ url_for('auth.login') }}">去登录</a></p>
+  </div>
+</section>
+{% endblock %}
