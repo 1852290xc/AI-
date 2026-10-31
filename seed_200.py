@@ -267,6 +267,7 @@ def main():
                     image=image, category_id=cat.id,
                     seller_id=sellers[i % len(sellers)].id,
                     ai_tags=",".join([cat_name, cond, brand]),
+                    campus=rng.choice([n for n in __import__('campus').CAMPUSES if n != '示范大学']),
                     views=rng.randint(3, 420),
                     status="sold" if made % 25 == 7 else "onsale",
                     created_at=now - timedelta(days=rng.randint(0, 30),

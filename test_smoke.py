@@ -206,14 +206,35 @@ def main():
         client.get("/auth/logout")
         r = client.post("/api/location", json={"lat": 39.9990, "lng": 116.3260})
         check("37. 提交定位返回最近校区",
-              r.status_code == 200 and r.json.get("ok") and r.json.get("campus") == "示范大学")
+              r.status_code == 200 and r.json.get("ok") and r.json.get("campus") == "清华大学")
 
         r = client.get("/")
         body = r.get_data(as_text=True)
-        check("38. 首页按附近校区优先展示", "已按「示范大学」附近" in body)
+        check("38. 首页按附近校区优先展示", "已按「清华大学」附近" in body)
 
         r = client.post("/api/location", json={"lat": 999, "lng": 999})
         check("39. 非法坐标被拒绝", r.status_code == 400 and r.json.get("ok") is False)
+
+        # ---------------- 全国高校地图 ----------------
+        client.post("/api/location", json={"lat": 39.9990, "lng": 116.3260})
+        r = client.get("/map")
+        body = r.get_data(as_text=True)
+        check("40. 地图页渲染全国高校", r.status_code == 200 and "全国高校地图" in body and "清华大学" in body)
+
+        import re as _re
+        def _count(html):
+            m = _re.search(r"当前半径内：(\d+) 件商品", html)
+            return int(m.group(1)) if m else -1
+
+        far = Product.query.filter_by(status="onsale").first()
+        far.campus = "新疆大学"
+        db.session.commit()
+        small = _count(client.get("/map?r=5").get_data(as_text=True))
+        large = _count(client.get("/map?r=0").get_data(as_text=True))
+        check("41. 半径筛选改变商品数量", 0 < small < large)
+
+        r = client.get("/map?r=999")
+        check("42. 非法半径回退不报错", r.status_code == 200)
 
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
