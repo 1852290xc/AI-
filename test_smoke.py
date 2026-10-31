@@ -311,6 +311,20 @@ def main():
         check("52. 扫物识别能匹配到同款",
               r.status_code == 200 and _j.get("ok") and (_j.get("match") or {}).get("id") is not None)
 
+        # ---------------- 分类树 ----------------
+        body = client.get("/").get_data(as_text=True)
+        check("53. 首页显示可收放分类树",
+              "taxo-panel" in body and "女装" in body and "工业品" in body and "toggleTaxo" in body)
+
+        r = client.get("/?g=digital")
+        n_digital = r.get_data(as_text=True).count('class="card"')
+        r0 = client.get("/")
+        n_all = r0.get_data(as_text=True).count('class="card"')
+        check("54. 大类筛选生效", r.status_code == 200 and 0 < n_digital < n_all)
+
+        r = client.get("/?g=digital&sub=手机")
+        check("55. 子类跳到关键词搜索", r.status_code == 200 and ("搜索" in r.get_data(as_text=True)))
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()

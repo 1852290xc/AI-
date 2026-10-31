@@ -23,6 +23,28 @@
 </section>
 
 <section class="toolbar">
+<section class="taxo-wrap">
+  <div class="taxo-head">
+    <b>分类</b>
+    <button class="taxo-toggle" id="taxoBtn" type="button" onclick="toggleTaxo()">
+      <span id="taxoTxt">收起</span> <span id="taxoArrow">▴</span>
+    </button>
+  </div>
+  <div class="taxo-panel" id="taxoPanel">
+    {% for g in groups %}
+    <div class="taxo-row{{ ' on' if g.key == group_key }}">
+      <span class="taxo-ico">{{ g.icon }}</span>
+      <div class="taxo-subs">
+        {% for name, cats, kw in g.subs %}
+        <a href="{{ url_for('main.index', g=g.key, sub=name) }}"
+           class="{{ 'cur' if g.key == group_key and sub_name == name }}">{{ name }}</a>{% if not loop.last %}<i>/</i>{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
   <div class="cats">
     <a class="cat {{ 'active' if not active_cat and not keyword }}" href="{{ url_for('main.index') }}">全部</a>
     {% for c in categories %}

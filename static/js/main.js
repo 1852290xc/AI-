@@ -465,3 +465,21 @@
     });
   });
 })();
+
+
+/* ---------- 分类收放 ---------- */
+function toggleTaxo(){
+  const panel = document.getElementById("taxoPanel");
+  const txt = document.getElementById("taxoTxt");
+  const arrow = document.getElementById("taxoArrow");
+  if (!panel) return;
+  const collapsed = panel.classList.toggle("collapsed");
+  txt.textContent = collapsed ? "展开" : "收起";
+  arrow.textContent = collapsed ? "▾" : "▴";
+  try { localStorage.setItem("taxo_collapsed", collapsed ? "1" : "0"); } catch (e) {}
+}
+document.addEventListener("DOMContentLoaded", function(){
+  try {
+    if (localStorage.getItem("taxo_collapsed") === "1") toggleTaxo();
+  } catch (e) {}
+});

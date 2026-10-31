@@ -566,9 +566,50 @@ h3 { font-size: 15px; color: var(--muted); font-weight: 600; text-transform: non
 .qc-risks ul,.qc-guarantee ul{margin:4px 0 0 16px;padding:0;color:#6b7280;line-height:1.7}
 .qc-guarantee b{color:#047857}
 
+/* ---------- 分类树（收放） ---------- */
+.taxo-wrap{margin:14px 0 6px;background:#fff;border:1px solid #eef0f5;border-radius:16px;padding:12px 16px}
+.taxo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.taxo-head b{font-size:15px}
+.taxo-toggle{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;
+  color:#4b5563;cursor:pointer}
+.taxo-toggle:hover{border-color:#c7d2fe;color:#4338ca}
+.taxo-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:2px 26px;overflow:hidden;
+  max-height:520px;transition:max-height .28s ease,opacity .2s ease}
+.taxo-panel.collapsed{max-height:0;opacity:0}
+.taxo-row{display:flex;align-items:center;gap:10px;padding:7px 2px;border-radius:8px}
+.taxo-row:hover{background:#f8fafc}
+.taxo-row.on{background:#eef2ff}
+.taxo-ico{width:26px;height:26px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex:none}
+.taxo-subs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;font-size:13.5px}
+.taxo-subs a{color:#1f2937;text-decoration:none}
+.taxo-subs a:hover{color:#2563eb}
+.taxo-subs a.cur{color:#2563eb;font-weight:700}
+.taxo-subs i{color:#d1d5db;font-style:normal;margin:0 4px}
+@media (max-width:820px){.taxo-panel{grid-template-columns:1fr}}
 
 
 
+
+
+
+/* ---- 分类树 ---- */
+.taxo-wrap{margin:14px 0 6px;background:#fff;border:1px solid #eef0f5;border-radius:16px;padding:12px 16px}
+.taxo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.taxo-head b{font-size:15px}
+.taxo-toggle{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;color:#4b5563;cursor:pointer}
+.taxo-toggle:hover{border-color:#c7d2fe;color:#4338ca}
+.taxo-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:2px 26px;overflow:hidden;max-height:560px;transition:max-height .28s ease,opacity .2s ease}
+.taxo-panel.collapsed{max-height:0;opacity:0}
+.taxo-row{display:flex;align-items:center;gap:10px;padding:7px 2px;border-radius:8px}
+.taxo-row:hover{background:#f8fafc}
+.taxo-row.on{background:#eef2ff}
+.taxo-ico{width:26px;height:26px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.taxo-subs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;font-size:13.5px}
+.taxo-subs a{color:#1f2937;text-decoration:none;cursor:pointer}
+.taxo-subs a:hover{color:#2563eb}
+.taxo-subs i{color:#d1d5db;font-style:normal;margin:0 4px}
+@media (max-width:820px){.taxo-panel{grid-template-columns:1fr}}
 
 /* ---- 质检报告 ---- */
 .qc-box{margin:12px 0 4px;border:1px solid #e6eaf2;border-radius:14px;padding:12px;background:#fff}
@@ -746,6 +787,13 @@ h3 { font-size: 15px; color: var(--muted); font-weight: 600; text-transform: non
       </div>
     </section>
 
+    <section class="taxo-wrap">
+      <div class="taxo-head">
+        <b>分类</b>
+        <button class="taxo-toggle" id="taxoBtn" onclick="toggleTaxo()"><span id="taxoTxt">收起</span> <span id="taxoArrow">▴</span></button>
+      </div>
+      <div class="taxo-panel" id="taxoPanel"></div>
+    </section>
     <section class="toolbar"><div class="cats" id="cats"></div></section>
 
     <section class="ai-panel" id="aiPanel">
@@ -912,7 +960,7 @@ const SYN = {'平板':['ipad','平板'],'手机':['iphone','手机'],'电脑':['
   '书':['教材','课本','书'],'便宜':[],'键盘':['键盘','机械'],'耳机':['耳机']};
 const CATS = ['全部','数码电子','教材书籍','生活用品','运动户外','服饰美妆','其他'];
 
-let state = {cat:'全部', kw:'', radius:0};
+let state = {cat:'全部', kw:'', radius:0, group:null, cats:[]};
 let cart = JSON.parse(localStorage.getItem('sf_cart') || '[]');
 let current = null;
 
@@ -973,6 +1021,7 @@ function card(p, withDist){
 function filter(){
   let list = DATA.slice();
   if (state.cat !== '全部') list = list.filter(p => p.cat === state.cat);
+  if (state.cats && state.cats.length) list = list.filter(p => state.cats.includes(p.cat));
   if (state.kw){
     const kw = state.kw.toLowerCase();
     const extra = SYN[kw] || [];
@@ -1158,6 +1207,48 @@ function setRadius(r){ state.radius = r; renderMap(); }
 
 
 
+
+
+/* ---------- 分类树 ---------- */
+const GROUPS = [
+  {k:'cloth', icon:'👕', subs:[['女装','服饰美妆','女装'],['男装','服饰美妆','男装'],['内衣','服饰美妆',''],['配饰','服饰美妆','围巾 帽 墨镜']]},
+  {k:'digital', icon:'📱', subs:[['家电','生活用品','台灯 风扇'],['手机','数码电子','手机'],['通信','数码电子','耳机'],['数码','数码电子','平板 相机 手表']]},
+  {k:'pc', icon:'💻', subs:[['电脑','数码电子','电脑 笔记本'],['配件','数码电子','键盘 鼠标 显示器'],['办公','数码电子 教材书籍','办公'],['文具','教材书籍 其他','笔袋 手账']]},
+  {k:'home', icon:'🛋️', subs:[['家具','生活用品','收纳 置物架'],['家装','生活用品','床帘 衣架'],['家居','生活用品','枕头 水壶'],['厨具','生活用品','电煮锅 保温杯']]},
+  {k:'shoe', icon:'👟', subs:[['女鞋','服饰美妆','帆布鞋'],['男鞋','服饰美妆','帆布鞋'],['运动','运动户外','跑鞋 篮球 足球'],['户外','运动户外','登山杖 自行车']]},
+  {k:'food', icon:'🥗', subs:[['食品','其他',''],['鲜花','其他',''],['酒水','其他',''],['健康','运动户外','护膝 哑铃']]},
+  {k:'misc', icon:'🚗', subs:[['汽车','其他',''],['珠宝','服饰美妆',''],['文玩','其他',''],['箱包','服饰美妆','包']]},
+  {k:'beauty', icon:'🎀', subs:[['美妆','服饰美妆','口红'],['个护','生活用品',''],['娱乐','其他','桌游 拼图'],['图书','教材书籍','']]},
+  {k:'baby', icon:'🍼', subs:[['母婴','其他',''],['童装','服饰美妆',''],['玩具','其他','拼图'],['宠物','其他','']]},
+  {k:'industry', icon:'🏭', subs:[['工业品','其他',''],['商业','其他',''],['农业','其他',''],['定制','其他','']]}
+];
+
+function renderTaxo(){
+  const box = document.querySelector('#taxoPanel');
+  box.innerHTML = GROUPS.map(g => `
+    <div class="taxo-row${state.group === g.k ? ' on' : ''}">
+      <span class="taxo-ico">${g.icon}</span>
+      <div class="taxo-subs">${g.subs.map(([name, cats, kw], i) => `
+        <a onclick="pickGroup('${g.k}','${name}','${cats}','${kw}');return false">${name}</a>${i < g.subs.length-1 ? '<i>/</i>' : ''}`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function pickGroup(key, name, cats, kw){
+  state.group = state.group === key ? null : key;
+  state.cats = state.group ? cats.split(' ') : [];
+  state.kw = kw || '';
+  const q = document.querySelector('#q'); if (q) q.value = state.kw;
+  renderTaxo(); render();
+  if (state.kw) runWorkflow(`识别意图：寻找「${name}」相关闲置`);
+}
+
+function toggleTaxo(){
+  const panel = document.querySelector('#taxoPanel');
+  const collapsed = panel.classList.toggle('collapsed');
+  document.querySelector('#taxoTxt').textContent = collapsed ? '展开' : '收起';
+  document.querySelector('#taxoArrow').textContent = collapsed ? '▾' : '▴';
+}
 
 /* ---------- 质检报告（本地规则，与后端一致） ---------- */
 function qcFor(p){
@@ -1633,7 +1724,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeModal(
 $('#mAdd').onclick = () => { if (current){ addCart(current); closeModal(); } };
 $('#cartBtn').onclick = openCart;
 
-bootFromServer().then(() => { catChips(); render(); syncCart(); renderMap(); setTimeout(buildIndex, 400); });
+bootFromServer().then(() => { catChips(); renderTaxo(); render(); syncCart(); renderMap(); setTimeout(buildIndex, 400); });
 runWorkflow('已加载 192 件在售闲置，随时可以开始检索');
 </script>
 </body>

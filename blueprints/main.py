@@ -6,6 +6,7 @@ import campus
 import llm
 from china_geo import CHINA_PATH
 import search_engine
+import taxonomy
 from config import Config
 from models import Behavior, Category, Product, SearchHistory, db
 
@@ -65,6 +66,10 @@ def index():
     page = request.args.get("page", 1, type=int)
     cat_id = request.args.get("cat", type=int)
     keyword = (request.args.get("q") or "").strip()
+    group_key = (request.args.get("g") or "").strip()
+    sub_name = (request.args.get("sub") or "").strip()
+    if group_key and sub_name and not keyword:
+        keyword = taxonomy.sub_keyword(group_key, sub_name)
     per_page = Config.PER_PAGE
 
     if keyword and current_user.is_authenticated:
@@ -74,6 +79,10 @@ def index():
     if cat_id:
         on_sale = on_sale.filter_by(category_id=cat_id)
     pool = on_sale.all()
+    if group_key:
+        _cats = taxonomy.group_categories(group_key)
+        if _cats:
+            pool = [x for x in pool if x.category and x.category.name in _cats]
 
     lat, lng = _location()
     mode, intent, hit_terms = "本地推荐", "", []
@@ -162,6 +171,7 @@ def index():
         on_sale_count=Product.query.filter_by(status="onsale").count(),
         recent_searches=_recent_searches(),
         located=lat is not None,
+        groups=taxonomy.GROUPS, group_key=group_key, sub_name=sub_name,
     )
 
 
