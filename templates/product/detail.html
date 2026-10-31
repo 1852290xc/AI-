@@ -62,7 +62,32 @@
       </div>
     {% endif %}
 
-    <p class="muted small">浏览 {{ p.views }} 次 · 发布于 {{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+    {% if ship %}
+<section class="ship-panel">
+  <div class="ship-head">
+    <span class="ai-label">AI 最优推荐</span>
+    <b>{{ ship.summary }}</b>
+  </div>
+  <div class="ship-grid">
+    {% for o in ship.options %}
+    <label class="ship-card{{ ' best' if o.best }}">
+      <input type="radio" name="ship" value="{{ o.key }}"{{ ' checked' if o.best }}>
+      <div class="ship-top">
+        <span class="ship-icon">{{ o.icon }}</span>
+        <div>
+          <b>{{ o.name }}</b>
+          <span class="muted small">{{ o.desc }} · {{ o.cost }}</span>
+        </div>
+        <span class="ship-score">{{ o.score }} 分</span>
+      </div>
+      {% if o.best %}<span class="ship-badge">AI 最优推荐</span>{% endif %}
+      <ul class="ship-reasons">{% for r in o.reason %}<li>{{ r }}</li>{% endfor %}</ul>
+    </label>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+<p class="muted small">浏览 {{ p.views }} 次 · 发布于 {{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
   </div>
 </section>
 

@@ -2,11 +2,13 @@ import os
 import uuid
 
 from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
-                   request, url_for)
+                   request, session, url_for)
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 import ai_engine
+import delivery
+import campus as campus_mod
 from config import Config
 from models import Behavior, Category, Favorite, Product, db
 
@@ -116,7 +118,20 @@ def detail(pid):
                                     Product.status == "onsale")
                .order_by(Product.views.desc()).limit(4).all())
 
-    return render_template("product/detail.html", p=product, is_fav=is_fav, related=related)
+    # 收货方式：算买家到卖家的距离，交给 AI 推荐
+    km = None
+    school = product.campus or (product.seller.school if product.seller else "")
+    lat = getattr(current_user, "lat", None) if current_user.is_authenticated else None
+    lng = getattr(current_user, "lng", None) if current_user.is_authenticated else None
+    if lat is None:
+        lat, lng = session.get("lat"), session.get("lng")
+    if lat and lng:
+        spot = campus_mod.coords(school)
+        if spot:
+            km = campus_mod.distance_km(lat, lng, spot[0], spot[1])
+    ship = delivery.recommend(km, product.price or 0, product.title or "")
+
+    return render_template("product/detail.html", p=product, is_fav=is_fav, related=related, ship=ship)
 
 
 @bp.route("/<int:pid>/edit", methods=["GET", "POST"])

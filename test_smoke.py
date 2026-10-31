@@ -265,6 +265,19 @@ def main():
         cmp = (r.json or {}).get("compare") or {}
         check("45. 与参考图比对判定为同一张", cmp.get("same") is True and cmp.get("phash_sim", 0) > 0.9)
 
+        # ---------------- 收货方式与 AI 推荐 ----------------
+        import delivery as _ship
+        r1 = _ship.recommend(0.5, 30, "八成新 高数教材")
+        r2 = _ship.recommend(800, 3000, "九成新 iPhone 13 128G")
+        r3 = _ship.recommend(None, 100, "台灯")
+        check("46. 近距离推荐自取", r1["best"] == "pickup")
+        check("47. 远距离推荐快递", r2["best"] == "express" and r2["options"][0]["score"] >= 70)
+        check("48. 无定位也能给出建议", r3["best"] in ("express", "errand", "pickup") and bool(r3["summary"]))
+
+        body = client.get(f"/product/{_P.query.first().id}").get_data(as_text=True)
+        check("49. 详情页展示三种收货方式",
+              all(k in body for k in ("快递运输", "跑腿", "自取", "AI 最优推荐")))
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()

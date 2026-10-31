@@ -509,3 +509,20 @@ h3 { font-size: 15px; color: var(--muted); font-weight: 600; text-transform: non
 
 /* ---------- 图片检测 ---------- */
 .img-check-body p{margin:4px 0; font-size:13px}
+
+/* ---------- 收货方式 ---------- */
+.ship-panel{margin:16px 0;background:linear-gradient(180deg,#fbfaff,#f7f5ff);border:1px solid #e9e5ff;border-radius:16px;padding:14px 16px}
+.ship-head{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.ship-head b{font-size:13.5px;color:#4c1d95}
+.ship-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ship-card{position:relative;display:block;background:#fff;border:1px solid #e9e5ff;border-radius:14px;padding:12px;cursor:pointer;transition:.2s}
+.ship-card:hover{border-color:#c4b5fd;box-shadow:0 6px 18px rgba(124,58,237,.10)}
+.ship-card.best{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+.ship-card input{position:absolute;opacity:0}
+.ship-top{display:flex;align-items:center;gap:8px}
+.ship-icon{font-size:20px}
+.ship-top b{display:block;font-size:13.5px;color:#111827}
+.ship-score{margin-left:auto;font-size:12px;font-weight:700;color:#6d28d9;background:#f5f3ff;border-radius:999px;padding:2px 8px}
+.ship-badge{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,#6366f1,#7c3aed);border-radius:999px;padding:2px 9px}
+.ship-reasons{margin:8px 0 0 16px;padding:0;font-size:11.5px;color:#6b7280;line-height:1.6}
+.ship-reasons li{margin:2px 0}
