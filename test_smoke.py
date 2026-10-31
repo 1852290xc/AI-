@@ -141,6 +141,24 @@ def main():
         r = client.get("/auth/logout", follow_redirects=True)
         check("24. 退出登录正常", "已退出登录" in r.get_data(as_text=True))
 
+        # ---------------- 检索与个性化推荐 ----------------
+        r = client.get("/?q=%E9%94%AE%E7%9B%98")
+        body = r.get_data(as_text=True)
+        check("25. 搜索「键盘」能命中机械键盘", r.status_code == 200 and "机械键盘" in body)
+
+        r = client.get("/?q=%E4%BE%BF%E5%AE%9C%E7%9A%84%E5%B9%B3%E6%9D%BF")
+        check("26. 口语查询「便宜的平板」能命中 iPad",
+              "iPad" in r.get_data(as_text=True))
+
+        client.post("/auth/login", data={"account": "zhangsan", "password": "123456"})
+        r = client.get("/?q=%E7%81%AF")
+        b = r.get_data(as_text=True)
+        check("27. 登录后搜索页出现个性化推荐与理由",
+              "猜你喜欢" in b and ("✦" in b))
+
+        r = client.get("/api/health")
+        check("28. 健康检查返回大模型接入状态", r.status_code == 200 and "llm" in (r.json or {}))
+
     passed = sum(1 for _, ok, _ in RESULTS if ok)
     total = len(RESULTS)
     print()
