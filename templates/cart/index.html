@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}购物车 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <h1>购物车</h1>
+    <span class="muted">共 {{ items|length }} 件 · 可结算 {{ valid }} 件 · 按加入时间倒序</span>
+  </div>
+
+  {% if items %}
+    <form method="post" action="{{ url_for('cart.checkout') }}" id="cartForm">
+      <div class="cart-toolbar">
+        <label class="checkline"><input type="checkbox" id="checkAll"> 全选</label>
+        <span class="muted small" id="pickInfo">已选 0 件</span>
+        <span class="muted small" style="margin-left:auto">结算后可到「我的订单」确认收货</span>
+      </div>
+
+      <div class="cart-list">
+        {% for it in items %}
+          {% set p = it.product %}
+          {% set ok = p and p.status == 'onsale' and p.seller_id != current_user.id %}
+          <div class="cart-row {{ '' if ok else 'dead' }}">
+            <label class="cart-check">
+              <input type="checkbox" name="ids" value="{{ it.id }}"
+                     data-price="{{ '%.2f'|format(p.price if p else 0) }}" {{ 'disabled' if not ok }}>
+            </label>
+            <a class="cart-thumb" href="{{ url_for('product.detail', pid=p.id) }}">
+              {% if p and p.image %}
+                <img src="{{ url_for('static', filename='uploads/' ~ p.image) }}" alt="{{ p.title }}">
+              {% else %}
+                <div class="card-placeholder">闲</div>
+              {% endif %}
+            </a>
+            <div class="cart-main">
+              <a class="cart-title" href="{{ url_for('product.detail', pid=p.id) }}">{{ p.title }}</a>
+              <p class="muted small">{{ p.condition }} · {{ p.seller.nickname }} · {{ p.seller.school }}</p>
+              {% if not ok %}
+                <p class="warn-text">{{ '这是你自己发布的商品' if p.seller_id == current_user.id else '已被买走或下架，结算时自动跳过' }}</p>
+              {% endif %}
+            </div>
+            <div class="cart-price">¥{{ '%.0f'|format(p.price) }}</div>
+            <button class="btn btn-ghost btn-sm cart-del" type="submit"
+                    formaction="{{ url_for('cart.remove', item_id=it.id) }}">移除</button>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="cart-bar">
+        <div>
+          <span class="muted">已选合计</span>
+          <strong class="cart-total" id="cartTotal">¥0</strong>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" id="payBtn" disabled>结算</button>
+      </div>
+    </form>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">购物车是空的</p>
+      <p class="muted">在商品详情页点「加入购物车」，可以一次结算多件。</p>
+      <a class="btn btn-primary" href="{{ url_for('main.index') }}">去逛逛</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var all = document.getElementById("checkAll");
+  if (!all) return;
+  var boxes = [].slice.call(document.querySelectorAll('input[name="ids"]:not(:disabled)'));
+  var total = document.getElementById("cartTotal");
+  var info = document.getElementById("pickInfo");
+  var pay = document.getElementById("payBtn");
+
+  function refresh(){
+    var sum = 0, n = 0;
+    boxes.forEach(function(b){
+      if (b.checked){ sum += parseFloat(b.dataset.price || "0"); n++; }
+    });
+    total.textContent = "¥" + sum.toFixed(0);
+    info.textContent = "已选 " + n + " 件";
+    pay.disabled = n === 0;
+    pay.textContent = n > 1 ? ("结算(" + n + ")") : "结算";
+    all.checked = n > 0 && n === boxes.length;
+  }
+
+  all.addEventListener("change", function(){
+    boxes.forEach(function(b){ b.checked = all.checked; });
+    refresh();
+  });
+  boxes.forEach(function(b){ b.addEventListener("change", refresh); });
+  refresh();
+})();
+</script>
+{% endblock %}

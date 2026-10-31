@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}浏览记录 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <h1>浏览记录</h1>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="muted small">共 {{ total }} 条 · 按浏览时间倒序</span>
+      {% if total %}
+        <form method="post" action="{{ url_for('history.clear') }}"
+              onsubmit="return confirm('确定清空全部浏览记录吗？')">
+          <button class="btn btn-ghost btn-sm" type="submit">清空</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if total %}
+    {% for label, items in groups %}
+      {% if items %}
+        <h3 class="hist-day">{{ label }}<span class="muted small">{{ items|length }} 件</span></h3>
+        <div class="hist-list">
+          {% for it in items %}
+            {% set p = it.p %}
+            <a class="hist-row" href="{{ url_for('product.detail', pid=p.id) }}">
+              <div class="hist-thumb">
+                {% if p.image %}
+                  <img src="{{ url_for('static', filename='uploads/' ~ p.image) }}" alt="{{ p.title }}">
+                {% else %}
+                  <div class="card-placeholder">{{ (p.category.name[:1]) if p.category else '闲' }}</div>
+                {% endif %}
+              </div>
+              <div class="hist-main">
+                <b>{{ p.title }}</b>
+                <p class="muted small">{{ p.condition }} · {{ p.seller.nickname }} · {{ p.seller.school }}</p>
+                <p class="hist-time">{{ it.at.strftime('%H:%M') }} 浏览{% if it.repeat %} · 重复浏览{% endif %}</p>
+              </div>
+              <div class="hist-price">¥{{ '%.0f'|format(p.price) }}</div>
+              <span class="hist-state">{{ '在售' if p.status == 'onsale' else '已售/下架' }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">还没有浏览记录</p>
+      <p class="muted">看过的商品会按时间顺序出现在这里。</p>
+      <a class="btn btn-primary" href="{{ url_for('main.index') }}">去逛逛</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
