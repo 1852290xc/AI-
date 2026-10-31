@@ -1,0 +1,281 @@
+/* 智汇校园 · 前端交互
+   1) 发布页实时 AI 辅助（防抖 300ms）
+   2) 收藏异步切换
+   3) 图片上传预览
+   4) 聊天发送 / 轮询 / 自动滚底
+   5) AI 助手对话
+   6) 标签页切换
+*/
+(function () {
+  "use strict";
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+  function debounce(fn, wait) {
+    let timer = null;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), wait);
+    };
+  }
+
+  async function postJSON(url, data) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data || {}),
+    });
+    return res.json();
+  }
+
+  /* ---------------------------------------------------------- 发布页 */
+  const form = $("#publishForm");
+  if (form) {
+    const title = $("#fTitle");
+    const desc = $("#fDesc");
+    const cond = $("#fCond");
+    const original = $("#fOriginal");
+    const price = $("#fPrice");
+    const catBox = $("#aiCategory");
+    const priceBox = $("#aiPrice");
+    const tagBox = $("#aiTags");
+    const warn = $("#aiModerate");
+    const copyCard = $("#aiCopyCard");
+    const copyText = $("#aiCopyText");
+
+    const setHint = (box, label, text, hit) => {
+      if (!box) return;
+      box.querySelector(".ai-label").textContent = label;
+      box.querySelector(".ai-body").textContent = text;
+      box.classList.toggle("hit", !!hit);
+    };
+
+    const runClassify = debounce(async () => {
+      const t = title.value.trim();
+      if (t.length < 2) {
+        setHint(catBox, "AI 分类", "输入标题后自动判断品类", false);
+        return;
+      }
+      try {
+        const r = await postJSON("/ai/classify", { title: t, description: desc.value });
+        setHint(catBox, "AI 分类", `${r.category} · 置信度 ${Math.round(r.confidence * 100)}%`, true);
+      } catch (e) { /* 静默失败，不打断用户 */ }
+    }, 300);
+
+    const runTags = debounce(async () => {
+      const t = title.value.trim();
+      if (!t) return;
+      try {
+        const r = await postJSON("/ai/tags", { title: t, description: desc.value });
+        if (r.tags && r.tags.length) {
+          setHint(tagBox, "AI 标签", r.tags.join(" · "), true);
+        }
+      } catch (e) {}
+    }, 400);
+
+    const runModerate = debounce(async () => {
+      const text = `${title.value} ${desc.value}`.trim();
+      if (!text) { warn.hidden = true; return; }
+      try {
+        const r = await postJSON("/ai/moderate", { text });
+        if (!r.passed) {
+          warn.hidden = false;
+          warn.textContent = `⚠ ${r.message}`;
+        } else {
+          warn.hidden = true;
+        }
+      } catch (e) {}
+    }, 400);
+
+    const runPrice = debounce(async () => {
+      const v = parseFloat(original.value || "0");
+      if (!v) { setHint(priceBox, "AI 定价", "填写原价与成色后给出参考区间", false); return; }
+      try {
+        const r = await postJSON("/ai/price", { original_price: v, condition: cond.value });
+        setHint(priceBox, "AI 定价", `建议 ${r.low}–${r.high} 元（${r.condition}，约 ${(r.discount * 10).toFixed(1)} 折）`, true);
+        if (!price.value) price.placeholder = `建议挂 ¥${r.suggest}`;
+      } catch (e) {}
+    }, 250);
+
+    const runCopy = debounce(async () => {
+      const t = title.value.trim();
+      if (t.length < 3) return;
+      try {
+        const cls = await postJSON("/ai/classify", { title: t, description: desc.value });
+        const r = await postJSON("/ai/copy", {
+          title: t, category: cls.category, condition: cond.value, original_price: original.value,
+        });
+        copyCard.hidden = false;
+        copyText.textContent = r.copy;
+        copyCard.dataset.copy = r.copy;
+      } catch (e) {}
+    }, 700);
+
+    if (title) {
+      title.addEventListener("input", () => { runClassify(); runTags(); runModerate(); runCopy(); });
+      title.addEventListener("blur", runCopy);
+    }
+    if (desc) desc.addEventListener("input", () => { runTags(); runModerate(); runCopy(); });
+    if (cond) cond.addEventListener("change", () => { runPrice(); runCopy(); });
+    if (original) original.addEventListener("input", runPrice);
+
+    const btnUse = $("#btnUseCopy");
+    if (btnUse) {
+      btnUse.addEventListener("click", () => {
+        const text = copyCard.dataset.copy || "";
+        if (!text) return;
+        desc.value = desc.value ? `${desc.value}\n${text}` : text;
+        desc.dispatchEvent(new Event("input"));
+        btnUse.textContent = "已采纳 ✓";
+        setTimeout(() => (btnUse.textContent = "一键采纳"), 1500);
+      });
+    }
+
+    const file = $("#fImage");
+    if (file) {
+      file.addEventListener("change", () => {
+        const f = file.files && file.files[0];
+        const box = $("#preview");
+        const img = $("#previewImg");
+        if (!f) { box.hidden = true; return; }
+        if (f.size > 5 * 1024 * 1024) {
+          alert("图片超过 5MB，请压缩后再上传");
+          file.value = "";
+          box.hidden = true;
+          return;
+        }
+        img.src = URL.createObjectURL(f);
+        box.hidden = false;
+      });
+    }
+  }
+
+  /* ---------------------------------------------------------- 收藏 */
+  const favBtn = $("#favBtn");
+  if (favBtn) {
+    favBtn.addEventListener("click", async () => {
+      favBtn.disabled = true;
+      try {
+        const r = await postJSON(`/product/${favBtn.dataset.pid}/favorite`);
+        if (r.ok) {
+          favBtn.dataset.on = r.favorited ? "1" : "0";
+          favBtn.textContent = r.favorited ? "已收藏" : "收藏";
+          favBtn.classList.toggle("active", r.favorited);
+        }
+      } catch (e) {
+        alert("操作失败，请重新登录后再试");
+      } finally {
+        favBtn.disabled = false;
+      }
+    });
+  }
+
+  /* ---------------------------------------------------------- 聊天 */
+  const chatPage = $("#chatPage");
+  if (chatPage) {
+    const peer = chatPage.dataset.peer;
+    const body = $("#chatBody");
+    const input = $("#chatText");
+    const sendBtn = $("#chatSend");
+    const warn = $("#chatWarn");
+    let lastId = parseInt(chatPage.dataset.last || "0", 10);
+
+    const scrollBottom = () => { body.scrollTop = body.scrollHeight; };
+    scrollBottom();
+
+    function addBubble(msg, mine) {
+      const row = document.createElement("div");
+      row.className = `bubble-row${mine ? " mine" : ""}`;
+      row.innerHTML = `<div class="bubble ${mine ? "bubble-mine" : "bubble-other"}">${msg}
+        <span class="bubble-time">刚刚</span></div>`;
+      body.appendChild(row);
+      scrollBottom();
+    }
+
+    async function send() {
+      const text = input.value.trim();
+      if (!text) return;
+      sendBtn.disabled = true;
+      try {
+        const r = await postJSON("/message/send", { to: peer, content: text });
+        if (r.ok) {
+          addBubble(r.message.content, true);
+          input.value = "";
+          warn.hidden = true;
+        } else if (r.blocked) {
+          warn.hidden = false;
+          warn.textContent = `⚠ ${r.message}`;
+        } else {
+          warn.hidden = false;
+          warn.textContent = r.message || "发送失败";
+        }
+      } catch (e) {
+        warn.hidden = false;
+        warn.textContent = "网络异常，消息未发送";
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    sendBtn.addEventListener("click", send);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+
+    // 每 5 秒拉一次新消息
+    setInterval(async () => {
+      try {
+        const res = await fetch(`/message/poll/${peer}?since=${lastId}`);
+        const list = await res.json();
+        list.forEach((m) => {
+          lastId = Math.max(lastId, m.id);
+          if (!m.mine) addBubble(m.content, false);
+        });
+      } catch (e) {}
+    }, 5000);
+  }
+
+  /* ---------------------------------------------------------- AI 助手 */
+  const asBody = $("#assistantBody");
+  if (asBody) {
+    const input = $("#assistantText");
+    const sendBtn = $("#assistantSend");
+
+    const add = (text, mine) => {
+      const row = document.createElement("div");
+      row.className = `bubble-row${mine ? " mine" : ""}`;
+      row.innerHTML = `<div class="bubble ${mine ? "bubble-mine" : "bubble-other"}">${text}</div>`;
+      asBody.appendChild(row);
+      asBody.scrollTop = asBody.scrollHeight;
+    };
+
+    async function ask(q) {
+      if (!q.trim()) return;
+      add(q, true);
+      input.value = "";
+      try {
+        const r = await postJSON("/ai/chat", { question: q });
+        add(r.answer, false);
+      } catch (e) {
+        add("网络异常，暂时无法回答。", false);
+      }
+    }
+
+    sendBtn.addEventListener("click", () => ask(input.value));
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") ask(input.value); });
+    $$(".chip").forEach((c) => c.addEventListener("click", () => ask(c.dataset.q)));
+  }
+
+  /* ---------------------------------------------------------- tabs */
+  $$("[data-tabs]").forEach((group) => {
+    const tabs = $$(".tab", group);
+    tabs.forEach((t) => {
+      t.addEventListener("click", () => {
+        tabs.forEach((x) => x.classList.remove("active"));
+        t.classList.add("active");
+        const target = t.dataset.tab;
+        $$(".tab-panel").forEach((p) => p.classList.toggle("active", p.dataset.panel === target));
+      });
+    });
+  });
+})();
