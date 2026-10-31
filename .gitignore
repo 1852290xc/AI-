@@ -3,6 +3,8 @@ __pycache__/
 data/*.db
 static/uploads/*
 !static/uploads/p2_*.jpg
+!static/uploads/p3_*.jpg
+!static/uploads/p4_*.jpg
 !static/uploads/.gitkeep
 .vscode/
 .venv/
