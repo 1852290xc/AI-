@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}用户管理 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page admin">
+  {% include "admin/_nav.html" %}
+
+  <div class="admin-main">
+    <h1>用户管理</h1>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>昵称</th><th>学号</th><th>学校</th><th>信用分</th><th>身份</th><th>操作</th></tr></thead>
+        <tbody>
+          {% for u in items %}
+            <tr>
+              <td>{{ u.nickname }}{% if u.id == current_user.id %} <span class="muted small">(我)</span>{% endif %}</td>
+              <td class="muted">{{ u.student_id }}</td>
+              <td class="muted">{{ u.school }}</td>
+              <td>{{ u.credit }}</td>
+              <td>
+                {% if u.is_admin %}<span class="pill">管理员</span>{% else %}<span class="pill pill-sm">学生</span>{% endif %}
+                {% if u.banned %}<span class="pill pill-off">已封禁</span>{% endif %}
+              </td>
+              <td class="ops">
+                {% if u.id != current_user.id %}
+                  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, action='ban' if not u.banned else 'unban') }}" class="inline">
+                    <button class="btn btn-ghost btn-sm">{{ '解封' if u.banned else '封禁' }}</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.user_action', uid=u.id, action='promote') }}" class="inline">
+                    <button class="btn btn-ghost btn-sm">{{ '取消管理员' if u.is_admin else '设为管理员' }}</button>
+                  </form>
+                {% else %}
+                  <span class="muted small">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

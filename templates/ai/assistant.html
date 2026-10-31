@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}AI 助手 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page assistant-page">
+  <div class="page-head">
+    <h1>AI 助手</h1>
+    <p class="muted">本地问答库驱动，断网也能回答常见问题</p>
+  </div>
+
+  <div class="chat-body assistant-body" id="assistantBody">
+    <div class="bubble-row">
+      <div class="bubble bubble-other">
+        你好，我是集市小助手。可以问我：怎么发布商品、怎么改价、交易安全吗、平台收费吗。
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-asks">
+    <button class="chip" data-q="怎么发布商品？">怎么发布商品？</button>
+    <button class="chip" data-q="交易安全吗？">交易安全吗？</button>
+    <button class="chip" data-q="怎么改价格？">怎么改价格？</button>
+    <button class="chip" data-q="平台收费吗？">平台收费吗？</button>
+  </div>
+
+  <div class="chat-input">
+    <input type="text" id="assistantText" placeholder="输入你的问题…" maxlength="200">
+    <button class="btn btn-primary" id="assistantSend">发送</button>
+  </div>
+</section>
+{% endblock %}

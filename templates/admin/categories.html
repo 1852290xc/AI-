@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}分类管理 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page admin">
+  {% include "admin/_nav.html" %}
+
+  <div class="admin-main">
+    <h1>分类管理</h1>
+
+    <div class="cols">
+      <div class="panel">
+        <h3>新增分类</h3>
+        <form method="post" class="form">
+          <label>名称
+            <input type="text" name="name" required placeholder="例如：乐器">
+          </label>
+          <label>图标（emoji）
+            <input type="text" name="icon" value="📦" maxlength="4">
+          </label>
+          <button class="btn btn-primary" type="submit">添加</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>现有分类</h3>
+        <table class="table">
+          <thead><tr><th>图标</th><th>名称</th><th>商品数</th><th>操作</th></tr></thead>
+          <tbody>
+            {% for c in items %}
+              <tr>
+                <td>{{ c.icon }}</td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.products.count() }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('admin.category_delete', cid=c.id) }}" class="inline"
+                        onsubmit="return confirm('确定删除这个分类吗？')">
+                    <button class="btn btn-danger btn-sm">删除</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

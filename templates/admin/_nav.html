@@ -1,0 +1,8 @@
+<aside class="admin-nav">
+  <h3>管理后台</h3>
+  <a class="{{ 'active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">看板</a>
+  <a class="{{ 'active' if request.endpoint == 'admin.products' }}" href="{{ url_for('admin.products') }}">商品管理</a>
+  <a class="{{ 'active' if request.endpoint == 'admin.users' }}" href="{{ url_for('admin.users') }}">用户管理</a>
+  <a class="{{ 'active' if request.endpoint == 'admin.categories' }}" href="{{ url_for('admin.categories') }}">分类管理</a>
+  <a href="{{ url_for('main.index') }}">← 返回前台</a>
+</aside>

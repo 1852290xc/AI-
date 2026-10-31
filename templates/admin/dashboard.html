@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}管理看板 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page admin">
+  {% include "admin/_nav.html" %}
+
+  <div class="admin-main">
+    <h1>管理看板</h1>
+
+    <div class="stat-row">
+      <div class="stat"><strong>{{ stats.users }}</strong><span>用户总数</span></div>
+      <div class="stat"><strong>{{ stats.products }}</strong><span>商品总数</span></div>
+      <div class="stat"><strong>{{ stats.orders }}</strong><span>订单总数</span></div>
+      <div class="stat"><strong>{{ stats.today }}</strong><span>今日新增商品</span></div>
+      <div class="stat"><strong>{{ stats.onsale }}</strong><span>在售</span></div>
+      <div class="stat"><strong>{{ stats.sold }}</strong><span>成交订单</span></div>
+    </div>
+
+    <div class="panel">
+      <h3>最近发布</h3>
+      <table class="table">
+        <thead><tr><th>商品</th><th>卖家</th><th>价格</th><th>状态</th><th>时间</th></tr></thead>
+        <tbody>
+          {% for p in recent %}
+            <tr>
+              <td><a href="{{ url_for('product.detail', pid=p.id) }}">{{ p.title }}</a></td>
+              <td>{{ p.seller.nickname }}</td>
+              <td>¥{{ '%.0f'|format(p.price) }}</td>
+              <td>{{ p.status }}</td>
+              <td class="muted small">{{ p.created_at.strftime('%m-%d %H:%M') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

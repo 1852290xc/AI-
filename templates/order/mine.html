@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}我的订单 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head"><h1>我的订单</h1></div>
+
+  <div class="tabs" data-tabs>
+    <button class="tab active" data-tab="bought">我买到的 <span class="count">{{ bought|length }}</span></button>
+    <button class="tab" data-tab="sold">我卖出的 <span class="count">{{ sold|length }}</span></button>
+  </div>
+
+  <div class="tab-panel active" data-panel="bought">
+    {% if bought %}
+      {% for o in bought %}
+        <div class="order-row">
+          <div class="order-main">
+            <a href="{{ url_for('product.detail', pid=o.product_id) }}">{{ o.product.title }}</a>
+            <p class="muted small">卖家：{{ o.seller.nickname }} · {{ o.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+          </div>
+          <div class="order-amount">¥{{ '%.0f'|format(o.amount) }}</div>
+          <div class="order-state">
+            {% if o.status == 'pending' %}<span class="pill pill-warn">待确认</span>
+            {% elif o.status == 'done' %}<span class="pill pill-ok">已完成</span>
+            {% else %}<span class="pill pill-off">已取消</span>{% endif %}
+          </div>
+          <div class="order-ops">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('message.chat', uid=o.seller_id) }}">联系卖家</a>
+            {% if o.status == 'pending' %}
+              <form method="post" action="{{ url_for('order.done', oid=o.id) }}" class="inline">
+                <button class="btn btn-primary btn-sm" type="submit">确认收货</button>
+              </form>
+              <form method="post" action="{{ url_for('order.cancel', oid=o.id) }}" class="inline">
+                <button class="btn btn-ghost btn-sm" type="submit">取消</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><p class="empty-title">还没有买过东西</p></div>
+    {% endif %}
+  </div>
+
+  <div class="tab-panel" data-panel="sold">
+    {% if sold %}
+      {% for o in sold %}
+        <div class="order-row">
+          <div class="order-main">
+            <a href="{{ url_for('product.detail', pid=o.product_id) }}">{{ o.product.title }}</a>
+            <p class="muted small">买家：{{ o.buyer.nickname }} · {{ o.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+          </div>
+          <div class="order-amount">¥{{ '%.0f'|format(o.amount) }}</div>
+          <div class="order-state">
+            {% if o.status == 'pending' %}<span class="pill pill-warn">待确认</span>
+            {% elif o.status == 'done' %}<span class="pill pill-ok">已完成</span>
+            {% else %}<span class="pill pill-off">已取消</span>{% endif %}
+          </div>
+          <div class="order-ops">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('message.chat', uid=o.buyer_id) }}">联系买家</a>
+            {% if o.status == 'pending' %}
+              <form method="post" action="{{ url_for('order.done', oid=o.id) }}" class="inline">
+                <button class="btn btn-primary btn-sm" type="submit">标记完成</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><p class="empty-title">还没有卖出记录</p></div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

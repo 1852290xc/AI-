@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}商品管理 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page admin">
+  {% include "admin/_nav.html" %}
+
+  <div class="admin-main">
+    <div class="page-head">
+      <h1>商品管理</h1>
+      <div class="tabs">
+        <a class="tab {{ 'active' if not status }}" href="{{ url_for('admin.products') }}">全部</a>
+        <a class="tab {{ 'active' if status == 'onsale' }}" href="{{ url_for('admin.products', status='onsale') }}">在售</a>
+        <a class="tab {{ 'active' if status == 'off' }}" href="{{ url_for('admin.products', status='off') }}">已下架</a>
+        <a class="tab {{ 'active' if status == 'sold' }}" href="{{ url_for('admin.products', status='sold') }}">已售</a>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>商品</th><th>卖家</th><th>价格</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>
+          {% for p in items %}
+            <tr>
+              <td>
+                <a href="{{ url_for('product.detail', pid=p.id) }}">{{ p.title }}</a>
+                <div class="muted small">{{ p.category.name if p.category else '未分类' }}</div>
+              </td>
+              <td>{{ p.seller.nickname }}</td>
+              <td>¥{{ '%.0f'|format(p.price) }}</td>
+              <td>{{ p.status }}</td>
+              <td class="ops">
+                <form method="post" action="{{ url_for('admin.product_action', pid=p.id, action='online') }}" class="inline">
+                  <button class="btn btn-ghost btn-sm">上架</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.product_action', pid=p.id, action='off') }}" class="inline">
+                  <button class="btn btn-ghost btn-sm">下架</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.product_action', pid=p.id, action='delete') }}" class="inline"
+                      onsubmit="return confirm('删除后不可恢复，确定吗？')">
+                  <button class="btn btn-danger btn-sm">删除</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

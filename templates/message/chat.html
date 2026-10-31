@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}与 {{ other.nickname }} 的对话 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page chat-page" id="chatPage" data-peer="{{ other.id }}"
+         data-last="{{ messages[-1].id if messages else 0 }}">
+  <div class="chat-head">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('message.inbox') }}">返回</a>
+    <span class="avatar">{{ other.avatar_text }}</span>
+    <div>
+      <b>{{ other.nickname }}</b>
+      <p class="muted small">{{ other.school }}</p>
+    </div>
+  </div>
+
+  <div class="chat-body" id="chatBody">
+    {% if not messages %}
+      <p class="muted small chat-empty">还没有消息，打个招呼吧。</p>
+    {% endif %}
+    {% for m in messages %}
+      <div class="bubble-row {{ 'mine' if m.sender_id == current_user.id }}">
+        <div class="bubble {{ 'bubble-mine' if m.sender_id == current_user.id else 'bubble-other' }}">
+          {{ m.content }}
+          <span class="bubble-time">{{ m.created_at.strftime('%H:%M') }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="chat-input">
+    <input type="text" id="chatText" placeholder="输入消息，回车发送（含违规词会被 AI 拦截）" maxlength="500">
+    <button class="btn btn-primary" id="chatSend">发送</button>
+  </div>
+  <p class="ai-warn" id="chatWarn" hidden></p>
+</section>
+{% endblock %}

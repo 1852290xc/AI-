@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}私信 · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head"><h1>私信</h1></div>
+
+  {% if conversations %}
+    <div class="conv-list">
+      {% for c in conversations %}
+        <a class="conv" href="{{ url_for('message.chat', uid=c.user.id) }}">
+          <span class="avatar">{{ c.user.avatar_text }}</span>
+          <div class="conv-main">
+            <div class="conv-top">
+              <b>{{ c.user.nickname }}</b>
+              <span class="muted small">{{ c.last.created_at.strftime('%m-%d %H:%M') }}</span>
+            </div>
+            <p class="muted small conv-preview">{{ c.last.content }}</p>
+          </div>
+          {% if c.unread %}<span class="unread-dot">{{ c.unread }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">还没有会话</p>
+      <p class="muted">在商品详情页点「私信卖家」就能开始聊天。</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
