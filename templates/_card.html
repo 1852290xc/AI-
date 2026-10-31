@@ -16,6 +16,9 @@
         <span class="price-old">¥{{ '%.0f'|format(p.original_price) }}</span>
       {% endif %}
     </div>
+    {% if reason %}
+      <div class="card-reason">✦ {{ reason }}</div>
+    {% endif %}
     <div class="card-meta">
       <span class="pill pill-sm">{{ p.condition }}</span>
       <span class="muted">{{ p.seller.school if p.seller else '' }}</span>

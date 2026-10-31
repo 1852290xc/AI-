@@ -13,9 +13,12 @@
     </div>
   </div>
   <div class="hero-panel">
-    <div class="hero-stat"><strong>{{ products|length }}</strong><span>当前在售</span></div>
+    <div class="hero-stat"><strong>{{ on_sale_count if on_sale_count is defined else rows|length }}</strong><span>当前在售</span></div>
     <div class="hero-stat"><strong>7</strong><span>AI 能力</span></div>
-    <div class="hero-stat"><strong>0</strong><span>外部 API 依赖</span></div>
+    <div class="hero-stat">
+      <strong>{{ 'AI' if llm_status.enabled else '0' }}</strong>
+      <span>{{ '大模型已接入' if llm_status.enabled else '外部 API 依赖' }}</span>
+    </div>
   </div>
 </section>
 
@@ -31,19 +34,26 @@
 
 <div class="section-head">
   <h2>{{ title }}</h2>
-  {% if keyword %}<span class="muted">共 {{ products|length }} 件相关闲置</span>{% endif %}
+  <span class="mode-badge">{{ mode }}</span>
+  {% if keyword %}<span class="muted">共 {{ rows|length }} 件相关闲置</span>{% endif %}
 </div>
 
-{% if products %}
+{% if keyword and intent %}
+  <p class="intent-line">AI 理解：{{ intent }}</p>
+{% endif %}
+
+{% if rows %}
   <div class="grid">
-    {% for p in products %}
+    {% for r in rows %}
+      {% set p = r.product %}
+      {% set reason = r.reason %}
       {% include "_card.html" %}
     {% endfor %}
   </div>
 {% else %}
   <div class="empty">
-    <p class="empty-title">这里还空着</p>
-    <p class="muted">换个分类看看，或者成为第一个发布的人。</p>
+    <p class="empty-title">没有找到匹配的闲置</p>
+    <p class="muted">换个说法试试，比如“便宜的平板”“考研资料”；或者直接发布一件。</p>
     <a class="btn btn-primary" href="{{ url_for('product.publish') }}">去发布</a>
   </div>
 {% endif %}
@@ -58,6 +68,22 @@
       <a class="btn btn-ghost btn-sm" href="{{ url_for('main.index', page=pages.next_num, cat=active_cat, q=keyword) }}">下一页</a>
     {% endif %}
   </nav>
+{% endif %}
+
+{% if likes %}
+  <section class="likes">
+    <div class="section-head">
+      <h2>{{ '猜你喜欢' if current_user.is_authenticated else '顺便看看' }}</h2>
+      <span class="muted">按你的浏览偏好排序</span>
+    </div>
+    <div class="grid">
+      {% for r in likes %}
+        {% set p = r.product %}
+        {% set reason = r.reason %}
+        {% include "_card.html" %}
+      {% endfor %}
+    </div>
+  </section>
 {% endif %}
 
 {% if hot %}
